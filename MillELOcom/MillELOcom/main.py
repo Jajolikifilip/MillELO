@@ -9,6 +9,7 @@ import uuid
 import threading
 from urllib.parse import unquote
 import os
+from sqlalchemy import text
 
 from app import app
 
@@ -1143,7 +1144,11 @@ class NineMensMorris:
 
 @app.route('/health')
 def health_check():
-    return 'OK', 200
+    try:
+        db.session.execute(text('SELECT 1'))
+        return 'OK', 200
+    except Exception:
+        return 'Database unavailable', 503
 
 @app.route('/favicon.ico')
 def favicon():
