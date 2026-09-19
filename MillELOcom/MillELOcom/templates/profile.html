@@ -1,0 +1,1001 @@
+{% extends "base.html" %}
+
+{% block title %}{{ user.username }} - Profile{% endblock %}
+
+{% block content %}
+{% if is_banned %}
+<div style="display: flex; justify-content: center; align-items: center; min-height: 60vh;">
+    <div class="card" style="text-align: center; max-width: 500px; padding: 60px 40px; border: 2px solid #ff4444; background: rgba(255, 0, 0, 0.05);">
+        <i class="fas fa-ban" style="font-size: 80px; color: #ff4444; margin-bottom: 20px; display: block;"></i>
+        <h2 style="color: #ff4444; font-size: 28px; margin-bottom: 15px;">This player has been banned</h2>
+        <p style="color: #888; font-size: 14px;">{{ user.username }} is no longer able to access MillELO.</p>
+    </div>
+</div>
+{% else %}
+<div class="grid grid-2">
+    <div>
+        <div class="card">
+            <div style="text-align: center; margin-bottom: 30px;">
+                {% set has_first_place = 'B1' in ranking_badges or 'R1' in ranking_badges if ranking_badges else false %}
+                {% set display_name_color = '#FFD700' if has_first_place else user.color %}
+                <h2 style="color: {{ display_name_color }}; position: relative; display: inline-block;">
+                    {% if ranking_badges %}
+                        {% for badge in ranking_badges %}
+                            {% set badge_color = '#FFD700' if badge in ['B1', 'R1'] else ('#C0C0C0' if badge in ['B2', 'R2'] else '#CD7F32') %}
+                            {% set badge_bg = '#8B4513' if badge.endswith('1') else ('#4a4a4a' if badge.endswith('2') else '#3d2d1d') %}
+                            <span style="background: {{ badge_bg }}; color: {{ badge_color }}; padding: 2px 6px; border-radius: 4px; font-size: 12px; font-weight: bold; margin-right: 6px; border: 1px solid {{ badge_color }};">[{{ badge }}]</span>
+                        {% endfor %}
+                    {% endif %}
+                    {% set bullet_title, bullet_color = get_title(user.bullet_rating, user) %}
+                    {% set blitz_title, blitz_color = get_title(user.blitz_rating, user) %}
+                    {% if bullet_title %}
+                        <span style="color: {{ bullet_color }};">{{ bullet_title }}</span>
+                    {% elif blitz_title %}
+                        <span style="color: {{ blitz_color }};">{{ blitz_title }}</span>
+                    {% endif %}
+                    {% if user.admin_rank == 'admin' %}
+                    <span class="admin-crown-name" style="display: inline-block; margin-right: 8px; position: relative;">
+                        <i class="fas fa-crown" style="color: #1a1a1a; text-shadow: 0 0 2px #fff, 0 0 4px #fff, 0 0 15px rgba(0,0,0,0.95), 0 0 25px rgba(0,0,0,0.85), 0 0 40px rgba(0,0,0,0.7); filter: drop-shadow(0 0 3px rgba(255,255,255,0.8));"></i>
+                    </span>
+                    {% elif user.admin_rank == 'dragon' %}
+                    <span class="dragon-icon-name" style="display: inline-block; margin-right: 8px; position: relative;">
+                        <i class="fas fa-dragon" style="color: #FFD700; text-shadow: 0 0 10px #FF8C00, 0 0 20px #FF4500, 0 0 30px #FF6600; filter: drop-shadow(0 0 5px rgba(255,165,0,0.8));"></i>
+                    </span>
+                    {% elif user.admin_rank == 'galaxy' %}
+                    <span class="galaxy-icon-name" style="display: inline-block; margin-right: 8px; position: relative;">
+                        <span class="galaxy-black-hole galaxy-black-hole-md"></span>
+                    </span>
+                    {% elif user.admin_rank == 'creator' %}
+                    {% endif %}
+                    {% if user.admin_rank == 'creator' %}
+                    <span class="creator-cloud-aura creator-cloud-aura-lg">{{ user.username }}</span>
+                    {% else %}
+                    <span style="{% if user.admin_rank == 'admin' %}text-shadow: 0 0 15px rgba(0,0,0,1), 0 0 25px rgba(0,0,0,0.9), 0 0 40px rgba(0,0,0,0.8);{% elif user.admin_rank == 'dragon' %}text-shadow: 0 0 8px #FFD700, 0 0 12px #FFD700, 0 0 18px #FF8C00, 0 0 25px #FF8C00;{% elif user.admin_rank == 'galaxy' %}text-shadow: 0 0 8px #9400D3, 0 0 15px #8A2BE2, 0 0 25px #4B0082, 0 0 35px #9400D3;{% endif %}">{{ user.username }}</span>
+                    {% endif %}
+                </h2>
+                <div style="font-size: 20px; margin: 10px 0;">
+                    Bullet: {{ user.bullet_rating }} | Blitz: {{ user.blitz_rating }}
+                    {% if user.admin_rank == 'admin' %}
+                    <span class="admin-crown-badge" style="display: inline-block; margin-left: 8px;">
+                        <i class="fas fa-crown" style="color: #1a1a1a; text-shadow: 0 0 2px #fff, 0 0 4px #fff, 0 0 15px rgba(0,0,0,0.95), 0 0 25px rgba(0,0,0,0.85), 0 0 40px rgba(0,0,0,0.7); font-size: 14px;"></i>
+                    </span>
+                    {% elif user.admin_rank == 'dragon' %}
+                    <span class="dragon-badge" style="display: inline-block; margin-left: 8px;">
+                        <i class="fas fa-dragon" style="color: #FFD700; text-shadow: 0 0 10px #FF8C00, 0 0 20px #FF4500, 0 0 30px #FF6600; font-size: 14px;"></i>
+                    </span>
+                    {% elif user.admin_rank == 'galaxy' %}
+                    <span class="galaxy-badge" style="display: inline-block; margin-left: 8px;">
+                        <span class="galaxy-black-hole galaxy-black-hole-md"></span>
+                    </span>
+                    {% endif %}
+                </div>
+                {% if user.likes and user.likes.count > 0 %}
+                <div style="margin: 10px 0; color: #ff69b4;">
+                    {% if user.admin_rank == 'admin' %}
+                    <i class="fas fa-crown" style="color: #1a1a1a; text-shadow: 0 0 2px #fff, 0 0 4px #fff, 0 0 15px rgba(0,0,0,0.95), 0 0 25px rgba(0,0,0,0.85), 0 0 40px rgba(0,0,0,0.7); font-size: 14px;"></i>
+                    {% elif user.admin_rank == 'dragon' %}
+                    <i class="fas fa-dragon" style="color: #ff8c00; text-shadow: 0 0 10px rgba(255,140,0,0.6);"></i>
+                    {% elif user.admin_rank == 'galaxy' %}
+                    <span class="galaxy-black-hole galaxy-black-hole-md"></span>
+                    {% elif user.admin_rank == 'creator' %}
+                    <i class="fas fa-gem" style="color: #FFD700; text-shadow: 0 0 8px #FFD700, 0 0 15px rgba(255,215,0,0.6); font-size: 14px;"></i>
+                    {% else %}
+                    <i class="fas fa-heart"></i>
+                    {% endif %}
+                    {{ user.likes.count }} like{% if user.likes.count != 1 %}s{% endif %}
+                </div>
+                {% endif %}
+                <div style="opacity: 0.7;">Member since {{ user.created[:10] }}</div>
+
+                {% if session.username and session.username != user.username %}
+                <div style="margin-top: 20px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+                    <button onclick="openChallengeModal('{{ user.username }}')" class="challenge-button">
+                        <i class="fas fa-gamepad"></i> Challenge
+                    </button>
+                    <button id="friend-action-btn" onclick="handleFriendAction('{{ user.username }}')" class="friend-action-button" style="background: linear-gradient(135deg, #3498db 0%, #2980b9 100%); color: white; padding: 12px 24px; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600; transition: all 0.2s;">
+                        <i class="fas fa-user-plus"></i> <span id="friend-btn-text">Add Friend</span>
+                    </button>
+                </div>
+                {% endif %}
+                
+                {% if is_own_profile %}
+                <div style="margin-top: 20px;">
+                    <a href="{{ url_for('profile_security', username=user.username) }}" class="btn" style="display: inline-block; background: linear-gradient(135deg, #3498db 0%, #2980b9 100%); padding: 10px 20px; text-decoration: none;">
+                        <i class="fas fa-shield-alt"></i> Security Settings
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+
+            <div style="margin-bottom: 30px;">
+                <h4 style="color: #ff6b35; margin-bottom: 15px;">
+                    <i class="fas fa-zap"></i> Bullet Statistics
+                </h4>
+                <div class="grid grid-2">
+                    <div style="text-align: center;">
+                        <div style="font-size: 24px; font-weight: bold; color: #28a745;">{{ user.wins.bullet }}</div>
+                        <div>Wins</div>
+                    </div>
+                    <div style="text-align: center;">
+                        <div style="font-size: 24px; font-weight: bold; color: #dc3545;">{{ user.losses.bullet }}</div>
+                        <div>Losses</div>
+                    </div>
+                    <div style="text-align: center;">
+                        <div style="font-size: 24px; font-weight: bold; color: #ffc107;">{{ user.draws.bullet }}</div>
+                        <div>Draws</div>
+                    </div>
+                    <div style="text-align: center;">
+                        <div style="font-size: 24px; font-weight: bold;">{{ user.games_played.bullet }}</div>
+                        <div>Total Games</div>
+                    </div>
+                </div>
+
+                {% if user.games_played.bullet > 0 %}
+                <div style="margin-top: 15px; text-align: center;">
+                    <div style="display: flex; justify-content: space-around; flex-wrap: wrap; gap: 10px;">
+                        <div>
+                            <strong style="color: #28a745;">Win Rate: {{ "%.1f"|format((user.wins.bullet / user.games_played.bullet) * 100) }}%</strong>
+                        </div>
+                        <div>
+                            <strong style="color: #ffc107;">Draw Rate: {{ "%.1f"|format((user.draws.bullet / user.games_played.bullet) * 100) }}%</strong>
+                        </div>
+                        <div>
+                            <strong style="color: #dc3545;">Loss Rate: {{ "%.1f"|format((user.losses.bullet / user.games_played.bullet) * 100) }}%</strong>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+
+            <div>
+                <h4 style="color: #f0d060; margin-bottom: 15px;">
+                    <i class="fas fa-bolt"></i> Blitz Statistics
+                </h4>
+                <div class="grid grid-2">
+                    <div style="text-align: center;">
+                        <div style="font-size: 24px; font-weight: bold; color: #28a745;">{{ user.wins.blitz }}</div>
+                        <div>Wins</div>
+                    </div>
+                    <div style="text-align: center;">
+                        <div style="font-size: 24px; font-weight: bold; color: #dc3545;">{{ user.losses.blitz }}</div>
+                        <div>Losses</div>
+                    </div>
+                    <div style="text-align: center;">
+                        <div style="font-size: 24px; font-weight: bold; color: #ffc107;">{{ user.draws.blitz }}</div>
+                        <div>Draws</div>
+                    </div>
+                    <div style="text-align: center;">
+                        <div style="font-size: 24px; font-weight: bold;">{{ user.games_played.blitz }}</div>
+                        <div>Total Games</div>
+                    </div>
+                </div>
+
+                {% if user.games_played.blitz > 0 %}
+                <div style="margin-top: 15px; text-align: center;">
+                    <div style="display: flex; justify-content: space-around; flex-wrap: wrap; gap: 10px;">
+                        <div>
+                            <strong style="color: #28a745;">Win Rate: {{ "%.1f"|format((user.wins.blitz / user.games_played.blitz) * 100) }}%</strong>
+                        </div>
+                        <div>
+                            <strong style="color: #ffc107;">Draw Rate: {{ "%.1f"|format((user.draws.blitz / user.games_played.blitz) * 100) }}%</strong>
+                        </div>
+                        <div>
+                            <strong style="color: #dc3545;">Loss Rate: {{ "%.1f"|format((user.losses.blitz / user.games_played.blitz) * 100) }}%</strong>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="card" style="margin-top: 20px;">
+            <h3><i class="fas fa-medal"></i> Titles</h3>
+            <div style="margin-top: 15px;">
+                {% for min_rating, title_name, title_color in [
+                                        (500, "I", "#8B4513"),
+                    (1000, "G", "#4B0082"),
+                    (1500, "L", "#006400"),
+                    (2000, "M", "#DC143C"),
+                    (2300, "D", "#0000FF"),
+                    (2500, "O", "#008000"),
+                    (2700, "SU", "#FFD700"),
+                    (3000, "V", "#FF8C00")
+                ] %}
+                <div style="display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #3c3c3c;">
+                    <span style="color: {{ title_color }}; font-weight: bold;">{{ title_name }}</span>
+                    <span>{{ min_rating }}+ rating</span>
+                    <span>
+                        {% if user.bullet_rating >= min_rating or user.blitz_rating >= min_rating %}
+                            <i class="fas fa-check" style="color: #28a745;"></i>
+                        {% else %}
+                            <i class="fas fa-lock" style="color: #6c757d;"></i>
+                        {% endif %}
+                    </span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <div>
+        <div class="card">
+            <h3><i class="fas fa-star"></i> Best Wins</h3>
+
+            <div>
+            <div>
+                <h4 style="color: #f0d060;">Bullet</h4>
+                <div id="bullet-best-wins">
+                    {% if user.best_wins.bullet %}
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 10px; margin-top: 10px;">
+                            {% for win in user.best_wins.bullet %}
+                            <div class="best-win-card" style="background: linear-gradient(135deg, rgba(240, 208, 96, 0.1), rgba(240, 208, 96, 0.05)); border: 1px solid rgba(240, 208, 96, 0.3); border-radius: 8px; padding: 15px; cursor: pointer; transition: all 0.3s ease; position: relative;" 
+                                 onclick="viewGameAnalysis('{{ win.game_id }}', event)"
+                                 onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(240, 208, 96, 0.3)'"
+                                 onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">
+
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; gap: 8px;">
+                                    <div style="display: flex; align-items: center; gap: 8px;">
+                                        <span style="background: #f0d060; color: #000; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 12px;">{{ loop.index }}</span>
+                                        <div style="background: linear-gradient(135deg, rgba(57, 147, 232, 0.15), rgba(57, 147, 232, 0.05)); border: 1px solid rgba(57, 147, 232, 0.3); border-radius: 6px; padding: 6px 12px; cursor: pointer; transition: all 0.3s ease;" 
+                                             onclick="window.location.href='/profile/{{ win.opponent }}'; event.stopPropagation();"
+                                             onmouseover="this.style.transform='scale(1.05)'; this.style.borderColor='rgba(57, 147, 232, 0.6)'; this.style.background='linear-gradient(135deg, rgba(57, 147, 232, 0.25), rgba(57, 147, 232, 0.1))'"
+                                             onmouseout="this.style.transform='scale(1)'; this.style.borderColor='rgba(57, 147, 232, 0.3)'; this.style.background='linear-gradient(135deg, rgba(57, 147, 232, 0.15), rgba(57, 147, 232, 0.05))'">
+                                            <span style="color: {{ users[win.opponent].color if win.opponent in users else '#c9c9c9' }}; font-weight: bold; font-size: 16px;">
+                                                {% if users[win.opponent] %}
+                                                    {% set opponent_rating = users[win.opponent].blitz_rating if users[win.opponent].blitz_rating > users[win.opponent].bullet_rating else users[win.opponent].bullet_rating %}
+                                                    {% set opponent_title, opponent_title_color = get_title(opponent_rating, users[win.opponent]) %}
+                                                    {% if opponent_title %}
+                                                        <span style="color: {{ opponent_title_color }}; font-weight: bold;">{{ opponent_title }}</span> 
+                                                    {% endif %}
+                                                    {% if users[win.opponent].admin_rank == 'creator' %}
+                                                        <span class="creator-cloud-aura creator-cloud-aura-sm">{{ win.opponent }}</span>
+                                                    {% elif users[win.opponent].admin_rank == 'galaxy' %}
+                                                        <span class="galaxy-black-hole galaxy-black-hole-sm" style="margin-right: 4px;"></span>
+                                                        {{ win.opponent }}
+                                                    {% elif users[win.opponent].admin_rank == 'dragon' %}
+                                                        <i class="fas fa-dragon" style="color: #FFD700; text-shadow: 0 0 10px #FF8C00, 0 0 20px #FF4500, 0 0 30px #FF6600; font-size: 12px; margin-right: 4px;"></i>
+                                                        {{ win.opponent }}
+                                                    {% elif users[win.opponent].admin_rank == 'admin' %}
+                                                        <i class="fas fa-crown" style="color: #1a1a1a; text-shadow: 0 0 2px #fff, 0 0 4px #fff, 0 0 15px rgba(0,0,0,0.95), 0 0 25px rgba(0,0,0,0.85), 0 0 40px rgba(0,0,0,0.7); font-size: 12px; margin-right: 4px;"></i>
+                                                        {{ win.opponent }}
+                                                    {% else %}
+                                                        {{ win.opponent }}
+                                                    {% endif %}
+                                                {% else %}
+                                                    {{ win.opponent }}
+                                                {% endif %}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div style="text-align: right;">
+                                        <div style="font-size: 18px; font-weight: bold; color: #f0d060;">{{ win.opponent_rating }}</div>
+                                        <div style="font-size: 12px; opacity: 0.7;">rating</div>
+                                    </div>
+                                </div>
+
+                                <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px; opacity: 0.8;">
+                                    <span>{{ win.date[:10] if win.date else 'Unknown date' }}</span>
+                                    <span style="color: #28a745;">Victory</span>
+                                </div>
+
+                                <div style="position: absolute; bottom: 8px; right: 8px; opacity: 0.5;">
+                                    <i class="fas fa-chart-line"></i>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div style="opacity: 0.6; text-align: center; padding: 20px;">No wins yet</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div style="margin-top: 30px;">
+                <h4 style="color: #f0d060;">Blitz</h4>
+                <div id="blitz-best-wins">
+                    {% if user.best_wins.blitz %}
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 10px; margin-top: 10px;">
+                            {% for win in user.best_wins.blitz %}
+                            <div class="best-win-card" style="background: linear-gradient(135deg, rgba(240, 208, 96, 0.1), rgba(240, 208, 96, 0.05)); border: 1px solid rgba(240, 208, 96, 0.3); border-radius: 8px; padding: 15px; cursor: pointer; transition: all 0.3s ease; position: relative;" 
+                                 onclick="viewGameAnalysis('{{ win.game_id }}', event)"
+                                 onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(240, 208, 96, 0.3)'"
+                                 onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">
+
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; gap: 8px;">
+                                    <div style="display: flex; align-items: center; gap: 8px;">
+                                        <span style="background: #f0d060; color: #000; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 12px;">{{ loop.index }}</span>
+                                        <div style="background: linear-gradient(135deg, rgba(57, 147, 232, 0.15), rgba(57, 147, 232, 0.05)); border: 1px solid rgba(57, 147, 232, 0.3); border-radius: 6px; padding: 6px 12px; cursor: pointer; transition: all 0.3s ease;" 
+                                             onclick="window.location.href='/profile/{{ win.opponent }}'; event.stopPropagation();"
+                                             onmouseover="this.style.transform='scale(1.05)'; this.style.borderColor='rgba(57, 147, 232, 0.6)'; this.style.background='linear-gradient(135deg, rgba(57, 147, 232, 0.25), rgba(57, 147, 232, 0.1))'"
+                                             onmouseout="this.style.transform='scale(1)'; this.style.borderColor='rgba(57, 147, 232, 0.3)'; this.style.background='linear-gradient(135deg, rgba(57, 147, 232, 0.15), rgba(57, 147, 232, 0.05))'">
+                                            <span style="color: {{ users[win.opponent].color if win.opponent in users else '#c9c9c9' }}; font-weight: bold; font-size: 16px;">
+                                                {% if users[win.opponent] %}
+                                                    {% set opponent_rating = users[win.opponent].blitz_rating if users[win.opponent].blitz_rating > users[win.opponent].bullet_rating else users[win.opponent].bullet_rating %}
+                                                    {% set opponent_title, opponent_title_color = get_title(opponent_rating, users[win.opponent]) %}
+                                                    {% if opponent_title %}
+                                                        <span style="color: {{ opponent_title_color }}; font-weight: bold;">{{ opponent_title }}</span> 
+                                                    {% endif %}
+                                                    {% if users[win.opponent].admin_rank == 'creator' %}
+                                                        <span class="creator-cloud-aura creator-cloud-aura-sm">{{ win.opponent }}</span>
+                                                    {% elif users[win.opponent].admin_rank == 'galaxy' %}
+                                                        <span class="galaxy-black-hole galaxy-black-hole-sm" style="margin-right: 4px;"></span>
+                                                        {{ win.opponent }}
+                                                    {% elif users[win.opponent].admin_rank == 'dragon' %}
+                                                        <i class="fas fa-dragon" style="color: #FFD700; text-shadow: 0 0 10px #FF8C00, 0 0 20px #FF4500, 0 0 30px #FF6600; font-size: 12px; margin-right: 4px;"></i>
+                                                        {{ win.opponent }}
+                                                    {% elif users[win.opponent].admin_rank == 'admin' %}
+                                                        <i class="fas fa-crown" style="color: #1a1a1a; text-shadow: 0 0 2px #fff, 0 0 4px #fff, 0 0 15px rgba(0,0,0,0.95), 0 0 25px rgba(0,0,0,0.85), 0 0 40px rgba(0,0,0,0.7); font-size: 12px; margin-right: 4px;"></i>
+                                                        {{ win.opponent }}
+                                                    {% else %}
+                                                        {{ win.opponent }}
+                                                    {% endif %}
+                                                {% else %}
+                                                    {{ win.opponent }}
+                                                {% endif %}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div style="text-align: right;">
+                                        <div style="font-size: 18px; font-weight: bold; color: #f0d060;">{{ win.opponent_rating }}</div>
+                                        <div style="font-size: 12px; opacity: 0.7;">rating</div>
+                                    </div>
+                                </div>
+
+                                <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px; opacity: 0.8;">
+                                    <span>{{ win.date[:10] if win.date else 'Unknown date' }}</span>
+                                    <span style="color: #28a745;">Victory</span>
+                                </div>
+
+                                <div style="position: absolute; bottom: 8px; right: 8px; opacity: 0.5;">
+                                    <i class="fas fa-chart-line"></i>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div style="opacity: 0.6; text-align: center; padding: 20px;">No wins yet</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="card" style="margin-top: 20px;">
+            <div style="text-align: center;">
+                <a href="/games/{{ user.username }}" style="text-decoration: none;">
+                    <button style="font-size: 24px; font-weight: bold; color: #3893e8; background: none; border: 2px solid #3893e8; padding: 15px 30px; border-radius: 5px; cursor: pointer; transition: all 0.3s; width: 100%;" 
+                            onmouseover="this.style.backgroundColor='#3893e8'; this.style.color='white';" 
+                            onmouseout="this.style.backgroundColor='transparent'; this.style.color='#3893e8';">
+                        <i class="fas fa-circle"></i> All games
+                    </button>
+                </a>
+            </div>
+        </div>
+
+        <div class="card" style="margin-top: 20px;">
+            <h3><i class="fas fa-trophy"></i> Tournament Achievements</h3>
+            <div style="margin-top: 15px;">
+                {% if user.trophies %}
+                    {% for trophy in user.trophies %}
+                    <div style="text-decoration: none; display: block; padding: 12px; margin: 8px 0; border-left: 4px solid {{ trophy.icon_color or '#FFD700' }}; background: rgba(255, 215, 0, 0.1); border-radius: 4px; transition: all 0.2s ease; cursor: {% if trophy.tournament_id %}pointer{% else %}default{% endif %};"
+                       {% if trophy.tournament_id %}onclick="window.location.href='{{ url_for('tournament_leaderboard', tournament_id=trophy.tournament_id) }}'"{% endif %}
+                       onmouseover="{% if trophy.tournament_id %}this.style.transform='translateX(5px)'; this.style.boxShadow='0 2px 10px rgba(0,0,0,0.3)';{% endif %}"
+                       onmouseout="this.style.transform='translateX(0)'; this.style.boxShadow='none';">
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <div style="position: relative; display: inline-block;">
+                                <i class="fas {{ trophy.icon or 'fa-trophy' }}" style="color: {{ trophy.icon_color or '#FFD700' }}; font-size: {% if trophy.icon_size == 'xlarge' %}36px{% elif trophy.icon_size == 'large' %}28px{% elif trophy.icon_size == 'medium' %}22px{% else %}18px{% endif %};"></i>
+                                {% if trophy.show_number and trophy.rank <= 3 %}
+                                <span style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: {% if trophy.icon_size == 'xlarge' %}14px{% else %}10px{% endif %}; font-weight: bold; color: {% if trophy.icon_color == '#FFD700' %}#000{% else %}#fff{% endif %}; text-shadow: 0 0 2px rgba(0,0,0,0.5);">{{ trophy.rank }}</span>
+                                {% endif %}
+                            </div>
+                            <div>
+                                <div style="color: #fff; font-weight: bold;">{{ trophy.name }}</div>
+                                <small style="color: #888;">{{ trophy.date }}{% if trophy.rank %} - Rank #{{ trophy.rank }}{% endif %}</small>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div style="opacity: 0.6;">No tournament achievements yet</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+        body {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #fff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+        }
+
+        .best-win-card {
+            background: linear-gradient(135deg, rgba(240, 208, 96, 0.1), rgba(240, 208, 96, 0.05));
+            border: 1px solid rgba(240, 208, 96, 0.3);
+            border-radius: 8px;
+            padding: 15px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .best-win-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(240, 208, 96, 0.3);
+            border-color: rgba(240, 208, 96, 0.6);
+        }
+
+        .best-win-card .rank-badge {
+            background: #f0d060;
+            color: #000;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 12px;
+        }
+
+        .best-win-card .opponent-name {
+            font-weight: bold;
+            font-size: 16px;
+            text-decoration: none;
+        }
+
+        .best-win-card .opponent-name:hover {
+            text-decoration: underline;
+        }
+
+        .best-win-card .rating {
+            font-size: 18px;
+            font-weight: bold;
+            color: #f0d060;
+        }
+
+        .best-win-card .analysis-icon {
+            position: absolute;
+            bottom: 8px;
+            right: 8px;
+            opacity: 0.5;
+            transition: opacity 0.3s ease;
+        }
+
+        .best-win-card:hover .analysis-icon {
+            opacity: 0.8;
+        }
+
+        /* Challenge Modal Styles */
+        .challenge-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            overflow-y: auto;
+        }
+
+        .challenge-modal-content {
+            background-color: #222738;
+            margin: 10% auto;
+            padding: 20px;
+            border-radius: 10px;
+            max-width: 600px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .challenge-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #3c3c3c;
+            padding-bottom: 10px;
+        }
+
+        .challenge-modal-title {
+            color: #fff;
+            font-size: 24px;
+            margin: 0;
+        }
+
+        .close-modal {
+            background: none;
+            border: none;
+            color: #fff;
+            font-size: 30px;
+            cursor: pointer;
+            transition: color 0.3s;
+        }
+
+        .close-modal:hover {
+            color: #f44336;
+        }
+
+        .challenge-option-group {
+            margin-bottom: 20px;
+        }
+
+        .challenge-option-label {
+            display: block;
+            color: #fff;
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+
+        .time-control-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+            gap: 10px;
+        }
+
+        .time-control-option {
+            background-color: #2c3247;
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.3s;
+        }
+
+        .time-control-option:hover,
+        .time-control-option.selected {
+            background-color: #3893e8;
+            transform: translateY(-3px);
+        }
+
+        .time-control-option .time-control-name {
+            color: #fff;
+            font-weight: bold;
+            font-size: 16px;
+        }
+
+        .time-control-option .time-control-desc {
+            color: #c9c9c9;
+            font-size: 12px;
+        }
+
+        .game-type-options {
+            display: flex;
+            gap: 10px;
+        }
+
+        .game-type-option {
+            background-color: #2c3247;
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.3s;
+            flex: 1;
+        }
+
+        .game-type-option:hover,
+        .game-type-option.selected {
+            background-color: #3893e8;
+            transform: translateY(-3px);
+        }
+
+        .game-type-option .game-type-name {
+            color: #fff;
+            font-weight: bold;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+        }
+
+        .game-type-option .game-type-desc {
+            color: #c9c9c9;
+            font-size: 12px;
+        }
+
+        .challenge-actions {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .challenge-send-btn,
+        .challenge-cancel-btn {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s;
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+        }
+
+        .challenge-cancel-btn {
+            background-color: #f44336;
+        }
+
+        .challenge-send-btn:hover {
+            background-color: #388e3c;
+        }
+
+        .challenge-cancel-btn:hover {
+            background-color: #d32f2f;
+        }
+
+        /* Challenge Notification */
+        .challenge-notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background-color: #28a745;
+            color: white;
+            padding: 15px 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            z-index: 1001;
+            opacity: 0;
+            transform: translateY(-20px);
+            transition: opacity 0.4s, transform 0.4s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .challenge-notification.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* General Button Style */
+        .challenge-button {
+            background-color: #3893e8;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s;
+        }
+
+        .challenge-button:hover {
+            background-color: #2767a0;
+        }
+</style>
+
+<script>
+let challengeData = {
+    opponent: '',
+    timeControl: '3+2',
+    gameType: 'ranked'
+};
+
+function openChallengeModal(username) {
+    challengeData.opponent = username;
+    document.getElementById('challengePlayerName').textContent = username;
+    document.getElementById('challengeModal').style.display = 'block';
+}
+
+function closeChallengeModal() {
+    document.getElementById('challengeModal').style.display = 'none';
+}
+
+function selectTimeControl(timeControl) {
+    challengeData.timeControl = timeControl;
+
+    // Update UI
+    document.querySelectorAll('.time-control-option').forEach(option => {
+        option.classList.remove('selected');
+    });
+    document.querySelector(`[data-time="${timeControl}"]`).classList.add('selected');
+}
+
+function selectGameType(gameType) {
+    challengeData.gameType = gameType;
+
+    // Update UI
+    document.querySelectorAll('.game-type-option').forEach(option => {
+        option.classList.remove('selected');
+    });
+    document.querySelector(`[data-type="${gameType}"]`).classList.add('selected');
+}
+
+function sendChallenge() {
+    // Initialize socket if not already done
+    if (!window.socket) {
+        window.socket = io();
+    }
+
+    // Send challenge via socket
+    window.socket.emit('send_challenge', {
+        opponent: challengeData.opponent,
+        time_control: challengeData.timeControl,
+        game_type: challengeData.gameType
+    });
+
+    // Show notification
+    showNotification(`Challenge sent to ${challengeData.opponent}!`);
+
+    // Close modal
+    closeChallengeModal();
+}
+
+function showNotification(message) {
+    const notification = document.createElement('div');
+    notification.className = 'challenge-notification';
+    notification.innerHTML = `
+        <i class="fas fa-paper-plane"></i> ${message}
+    `;
+
+    document.body.appendChild(notification);
+
+    // Show notification
+    setTimeout(() => {
+        notification.classList.add('show');
+    }, 100);
+
+    // Hide notification after 3 seconds
+    setTimeout(() => {
+        notification.classList.remove('show');
+        setTimeout(() => {
+            document.body.removeChild(notification);
+        }, 300);
+    }, 3000);
+}
+
+// Close modal when clicking outside
+window.onclick = function(event) {
+    const modal = document.getElementById('challengeModal');
+    if (event.target === modal) {
+        closeChallengeModal();
+    }
+}
+
+// Initialize socket event listeners for challenges
+document.addEventListener('DOMContentLoaded', function() {
+    if (window.socket) {
+        setupChallengeListeners();
+    } else {
+        // Wait for socket to be initialized
+        setTimeout(() => {
+            if (window.socket) {
+                setupChallengeListeners();
+            }
+        }, 1000);
+    }
+});
+
+function setupChallengeListeners() {
+    window.socket.on('challenge_received', function(data) {
+        showChallengeReceived(data);
+    });
+
+    window.socket.on('challenge_accepted', function(data) {
+        showNotification('Challenge accepted! Starting game...');
+        // Redirect to game
+        window.location.href = '/play';
+    });
+
+    window.socket.on('challenge_declined', function(data) {
+        showNotification('Challenge declined.');
+    });
+}
+
+function showChallengeReceived(data) {
+    // Challenge notifications are now handled globally in base.html
+    // This function is kept for compatibility but notifications are shown via global system
+    console.log('Challenge received (handled by global notification system):', data);
+}
+
+function acceptChallenge(challengeId) {
+    if (window.acceptGlobalChallenge) {
+        // Use global system if available
+        window.acceptGlobalChallenge(challengeId, null);
+    } else {
+        // Fallback for direct acceptance
+        window.socket.emit('accept_challenge', { challenge_id: challengeId });
+    }
+}
+
+function declineChallenge(challengeId) {
+    if (window.declineGlobalChallenge) {
+        // Use global system if available
+        window.declineGlobalChallenge(challengeId, null);
+    } else {
+        // Fallback for direct decline
+        window.socket.emit('decline_challenge', { challenge_id: challengeId });
+    }
+}
+
+function viewGameAnalysis(gameId, event) {
+    if (gameId && gameId !== 'undefined') {
+        window.location.href = '/analysis/' + gameId;
+    } else {
+        // If no game ID, just prevent the click from doing anything
+        event.preventDefault();
+        console.log('No game ID available for analysis');
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Your existing script content here, if any
+});
+</script>
+
+<!-- Challenge Modal -->
+<div id="challengeModal" class="challenge-modal">
+    <div class="challenge-modal-content">
+        <div class="challenge-modal-header">
+            <h2 class="challenge-modal-title">Challenge <span id="challengePlayerName"></span></h2>
+            <button class="close-modal" onclick="closeChallengeModal()">&times;</button>
+        </div>
+
+        <div class="challenge-option-group">
+            <label class="challenge-option-label">Time Control:</label>
+            <div class="time-control-grid">
+                <div class="time-control-option" data-time="1+0" onclick="selectTimeControl('1+0')">
+                    <div class="time-control-name">1+0</div>
+                    <div class="time-control-desc">Bullet</div>
+                </div>
+                <div class="time-control-option selected" data-time="3+2" onclick="selectTimeControl('3+2')">
+                    <div class="time-control-name">3+2</div>
+                    <div class="time-control-desc">Blitz</div>
+                </div>
+                <div class="time-control-option" data-time="5+3" onclick="selectTimeControl('5+3')">
+                    <div class="time-control-name">5+3</div>
+                    <div class="time-control-desc">Blitz</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="challenge-option-group">
+            <label class="challenge-option-label">Game Type:</label>
+            <div class="game-type-options">
+                <div class="game-type-option selected" data-type="ranked" onclick="selectGameType('ranked')">
+                    <div class="game-type-name">
+                        <i class="fas fa-trophy"></i> Ranked
+                    </div>
+                    <div class="game-type-desc">Affects ELO</div>
+                </div>
+                <div class="game-type-option" data-type="friendly" onclick="selectGameType('friendly')">
+                    <div class="game-type-name">
+                        <i class="fas fa-handshake"></i> Friendly
+                    </div>
+                    <div class="game-type-desc">No ELO change</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="challenge-actions">
+            <button class="challenge-cancel-btn" onclick="closeChallengeModal()">
+                <i class="fas fa-times"></i> Cancel
+            </button>
+            <button class="challenge-send-btn" onclick="sendChallenge()">
+                <i class="fas fa-paper-plane"></i> Send Challenge
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+var profileUsername = '{{ user.username }}';
+var currentFriendStatus = 'none';
+var pendingRequestId = null;
+
+document.addEventListener('DOMContentLoaded', function() {
+    checkFriendStatus();
+});
+
+function checkFriendStatus() {
+    fetch('/api/friend/status/' + profileUsername)
+    .then(r => r.json())
+    .then(data => {
+        currentFriendStatus = data.status;
+        pendingRequestId = data.request_id || null;
+        updateFriendButton();
+    });
+}
+
+function updateFriendButton() {
+    var btn = document.getElementById('friend-action-btn');
+    var text = document.getElementById('friend-btn-text');
+    if (!btn || !text) return;
+    
+    switch(currentFriendStatus) {
+        case 'friends':
+            btn.style.background = 'linear-gradient(135deg, #27ae60 0%, #2ecc71 100%)';
+            btn.innerHTML = '<i class="fas fa-check"></i> <span id="friend-btn-text">Friends</span>';
+            btn.onclick = null;
+            btn.style.cursor = 'default';
+            break;
+        case 'pending_sent':
+            btn.style.background = 'linear-gradient(135deg, #f39c12 0%, #e67e22 100%)';
+            btn.innerHTML = '<i class="fas fa-clock"></i> <span id="friend-btn-text">Request Sent</span>';
+            btn.onclick = null;
+            btn.style.cursor = 'default';
+            break;
+        case 'pending_received':
+            btn.style.background = 'linear-gradient(135deg, #27ae60 0%, #2ecc71 100%)';
+            btn.innerHTML = '<i class="fas fa-user-check"></i> <span id="friend-btn-text">Accept Request</span>';
+            btn.onclick = function() { acceptFriendRequest(); };
+            break;
+        case 'self':
+            btn.style.display = 'none';
+            break;
+        default:
+            btn.style.background = 'linear-gradient(135deg, #3498db 0%, #2980b9 100%)';
+            btn.innerHTML = '<i class="fas fa-user-plus"></i> <span id="friend-btn-text">Add Friend</span>';
+            btn.onclick = function() { sendFriendRequest(); };
+    }
+}
+
+function handleFriendAction(username) {
+    if (currentFriendStatus === 'none') {
+        sendFriendRequest();
+    } else if (currentFriendStatus === 'pending_received') {
+        acceptFriendRequest();
+    }
+}
+
+function sendFriendRequest() {
+    var btn = document.getElementById('friend-action-btn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...';
+    
+    fetch('/api/friend/request', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({username: profileUsername})
+    })
+    .then(r => r.json())
+    .then(data => {
+        btn.disabled = false;
+        if (data.success) {
+            currentFriendStatus = 'pending_sent';
+            updateFriendButton();
+        } else {
+            alert(data.error || 'Failed to send request');
+            updateFriendButton();
+        }
+    });
+}
+
+function acceptFriendRequest() {
+    if (!pendingRequestId) return;
+    
+    var btn = document.getElementById('friend-action-btn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Accepting...';
+    
+    fetch('/api/friend/accept', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({request_id: pendingRequestId})
+    })
+    .then(r => r.json())
+    .then(data => {
+        btn.disabled = false;
+        if (data.success) {
+            currentFriendStatus = 'friends';
+            updateFriendButton();
+        } else {
+            alert(data.error || 'Failed to accept request');
+            updateFriendButton();
+        }
+    });
+}
+</script>
+{% endif %}
+{% endblock %}

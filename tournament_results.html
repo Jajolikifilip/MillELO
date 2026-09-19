@@ -1,0 +1,381 @@
+{% extends "base.html" %}
+
+{% block title %}{{ tournament.name }} Results - MillELO.com{% endblock %}
+
+{% block content %}
+<div id="confetti-container"></div>
+
+<div class="card results-card">
+    <h2 style="color: {{ tournament.color }};">
+        <i class="fas fa-trophy"></i> {{ tournament.name }} Results
+    </h2>
+    
+    {% if tournament.tournament_type == 'world_cup' %}
+        <div style="text-align: center; margin: 20px 0;">
+            <div style="font-size: 48px; color: #FFD700;">
+                <i class="fas fa-trophy"></i>
+            </div>
+            <h3 style="color: #FFD700; margin: 10px 0;">Mill World Cup {{ tournament.name.split()[-1] }}</h3>
+            <p style="opacity: 0.8;">The most prestigious tournament in Nine Men's Morris</p>
+        </div>
+    {% endif %}
+    
+    {% if sorted_players|length >= 1 %}
+    <div class="podium-section">
+        <h3 style="text-align: center; margin-bottom: 30px;"><i class="fas fa-medal"></i> Top Players</h3>
+        
+        <div class="podium-container">
+            {% if sorted_players|length >= 2 %}
+            <div class="podium-place second">
+                <div class="podium-player">
+                    <div class="podium-medal silver"><i class="fas fa-medal"></i></div>
+                    <div class="podium-rank">2nd</div>
+                    <div class="podium-name" style="color: {{ users_data[sorted_players[1][0]].color if users_data and sorted_players[1][0] in users_data else '#c9c9c9' }};">
+                        {{ sorted_players[1][0] }}
+                    </div>
+                    <div class="podium-stats">
+                        <div class="podium-score">{{ sorted_players[1][1].score }} pts</div>
+                        <div class="podium-games">{{ sorted_players[1][1].games_played }} games</div>
+                        {% set wins = sorted_players[1][1].wins|default([])|length %}
+                        {% set games = sorted_players[1][1].games_played|default(1) %}
+                        <div class="podium-winrate">{{ ((wins / games) * 100)|round|int if games > 0 else 0 }}% wins</div>
+                    </div>
+                </div>
+                <div class="podium-stand stand-2"></div>
+            </div>
+            {% endif %}
+            
+            <div class="podium-place first">
+                <div class="podium-player">
+                    <div class="podium-medal gold"><i class="fas fa-crown"></i></div>
+                    <div class="podium-rank">1st</div>
+                    <div class="podium-name" style="color: {{ users_data[sorted_players[0][0]].color if users_data and sorted_players[0][0] in users_data else '#c9c9c9' }};">
+                        {{ sorted_players[0][0] }}
+                    </div>
+                    <div class="podium-stats">
+                        <div class="podium-score">{{ sorted_players[0][1].score }} pts</div>
+                        <div class="podium-games">{{ sorted_players[0][1].games_played }} games</div>
+                        {% set wins = sorted_players[0][1].wins|default([])|length %}
+                        {% set games = sorted_players[0][1].games_played|default(1) %}
+                        <div class="podium-winrate">{{ ((wins / games) * 100)|round|int if games > 0 else 0 }}% wins</div>
+                    </div>
+                </div>
+                <div class="podium-stand stand-1"></div>
+            </div>
+            
+            {% if sorted_players|length >= 3 %}
+            <div class="podium-place third">
+                <div class="podium-player">
+                    <div class="podium-medal bronze"><i class="fas fa-medal"></i></div>
+                    <div class="podium-rank">3rd</div>
+                    <div class="podium-name" style="color: {{ users_data[sorted_players[2][0]].color if users_data and sorted_players[2][0] in users_data else '#c9c9c9' }};">
+                        {{ sorted_players[2][0] }}
+                    </div>
+                    <div class="podium-stats">
+                        <div class="podium-score">{{ sorted_players[2][1].score }} pts</div>
+                        <div class="podium-games">{{ sorted_players[2][1].games_played }} games</div>
+                        {% set wins = sorted_players[2][1].wins|default([])|length %}
+                        {% set games = sorted_players[2][1].games_played|default(1) %}
+                        <div class="podium-winrate">{{ ((wins / games) * 100)|round|int if games > 0 else 0 }}% wins</div>
+                    </div>
+                </div>
+                <div class="podium-stand stand-3"></div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+    
+    <div style="margin-top: 40px;">
+        <h3>Full Leaderboard</h3>
+        <div style="margin-top: 15px;">
+            {% for username, data in sorted_players %}
+                <div class="leaderboard-row {% if loop.index <= 3 %}top-three{% endif %}">
+                    <div class="leaderboard-left">
+                        <span class="leaderboard-rank rank-{{ loop.index if loop.index <= 3 else 'default' }}">{{ loop.index }}</span>
+                        <strong style="color: {{ users_data[username].color if users_data and username in users_data else '#c9c9c9' }};">{{ username }}</strong>
+                        {% if loop.index == 1 and tournament.tournament_type == 'world_cup' %}
+                            <span style="color: #FFD700; margin-left: 10px;" title="Mill World Cup Winner">
+                                <i class="fas fa-trophy"></i> Champion
+                            </span>
+                        {% endif %}
+                    </div>
+                    <div class="leaderboard-right">
+                        <strong>{{ data.score }} pts</strong>
+                        <small style="opacity: 0.7; margin-left: 10px;">{{ data.games_played }} games</small>
+                    </div>
+                </div>
+            {% else %}
+                <p style="opacity: 0.6;">No participants in this tournament</p>
+            {% endfor %}
+        </div>
+    </div>
+    
+    <div style="margin-top: 30px;">
+        <h3>Tournament Details</h3>
+        <div style="margin-top: 15px;">
+            <div><strong>Duration:</strong> {{ tournament.duration }} minutes</div>
+            <div><strong>Time Control:</strong> {{ tournament.time_control }}</div>
+            <div><strong>Start:</strong> {{ tournament.start_time.split('T')[0] }} {{ tournament.start_time.split('T')[1][:5] }}</div>
+            <div><strong>End:</strong> {{ tournament.end_time.split('T')[0] }} {{ tournament.end_time.split('T')[1][:5] }}</div>
+            <div><strong>Total Games:</strong> {{ tournament.games|length }}</div>
+        </div>
+    </div>
+    
+    <div style="margin-top: 20px; text-align: center;">
+        <a href="{{ url_for('tournaments_page') }}" class="btn">Back to Tournaments</a>
+    </div>
+</div>
+
+<style>
+#confetti-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 9999;
+    overflow: hidden;
+}
+
+.confetti {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    opacity: 0;
+    animation: confetti-fall 3s ease-out forwards;
+}
+
+@keyframes confetti-fall {
+    0% {
+        opacity: 1;
+        transform: translateY(-100px) rotate(0deg);
+    }
+    100% {
+        opacity: 0;
+        transform: translateY(100vh) rotate(720deg);
+    }
+}
+
+.results-card {
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.podium-section {
+    margin: 30px 0;
+    padding: 20px;
+    background: linear-gradient(180deg, rgba(255,215,0,0.05) 0%, transparent 100%);
+    border-radius: 12px;
+}
+
+.podium-container {
+    display: flex;
+    justify-content: center;
+    align-items: flex-end;
+    gap: 10px;
+    padding: 20px 0;
+}
+
+.podium-place {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 120px;
+}
+
+.podium-player {
+    text-align: center;
+    padding: 15px 10px;
+    animation: podium-appear 0.5s ease-out forwards;
+    opacity: 0;
+}
+
+.first .podium-player { animation-delay: 0.3s; }
+.second .podium-player { animation-delay: 0.5s; }
+.third .podium-player { animation-delay: 0.7s; }
+
+@keyframes podium-appear {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.podium-medal {
+    font-size: 32px;
+    margin-bottom: 8px;
+}
+
+.podium-medal.gold { color: #FFD700; text-shadow: 0 0 10px rgba(255,215,0,0.5); }
+.podium-medal.silver { color: #C0C0C0; text-shadow: 0 0 10px rgba(192,192,192,0.5); }
+.podium-medal.bronze { color: #CD7F32; text-shadow: 0 0 10px rgba(205,127,50,0.5); }
+
+.podium-rank {
+    font-size: 14px;
+    font-weight: bold;
+    color: #888;
+    margin-bottom: 5px;
+}
+
+.podium-name {
+    font-size: 18px;
+    font-weight: bold;
+    margin-bottom: 10px;
+    word-break: break-word;
+}
+
+.first .podium-name { font-size: 22px; }
+
+.podium-stats {
+    font-size: 12px;
+    color: #888;
+    line-height: 1.6;
+}
+
+.podium-score {
+    font-size: 16px;
+    font-weight: bold;
+    color: #f1c40f;
+}
+
+.first .podium-score { font-size: 20px; }
+
+.podium-stand {
+    width: 100%;
+    border-radius: 8px 8px 0 0;
+    animation: stand-rise 0.5s ease-out forwards;
+    transform-origin: bottom;
+    transform: scaleY(0);
+}
+
+.stand-1 {
+    height: 100px;
+    background: linear-gradient(180deg, #FFD700, #B8860B);
+    animation-delay: 0.1s;
+}
+
+.stand-2 {
+    height: 70px;
+    background: linear-gradient(180deg, #C0C0C0, #808080);
+    animation-delay: 0.2s;
+}
+
+.stand-3 {
+    height: 50px;
+    background: linear-gradient(180deg, #CD7F32, #8B4513);
+    animation-delay: 0.3s;
+}
+
+@keyframes stand-rise {
+    from { transform: scaleY(0); }
+    to { transform: scaleY(1); }
+}
+
+.leaderboard-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 15px;
+    margin: 5px 0;
+    border: 1px solid #3c3c3c;
+    border-radius: 6px;
+    transition: background 0.2s;
+}
+
+.leaderboard-row:hover {
+    background: rgba(255,255,255,0.05);
+}
+
+.leaderboard-row.top-three {
+    border-color: #555;
+}
+
+.leaderboard-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.leaderboard-rank {
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    font-weight: bold;
+    font-size: 12px;
+}
+
+.leaderboard-rank.rank-1 { background: linear-gradient(135deg, #FFD700, #B8860B); color: #000; }
+.leaderboard-rank.rank-2 { background: linear-gradient(135deg, #C0C0C0, #808080); color: #000; }
+.leaderboard-rank.rank-3 { background: linear-gradient(135deg, #CD7F32, #8B4513); color: #fff; }
+.leaderboard-rank.rank-default { background: #333; color: #888; }
+
+@media (max-width: 600px) {
+    .podium-container {
+        gap: 5px;
+    }
+    
+    .podium-place {
+        min-width: 90px;
+    }
+    
+    .podium-name {
+        font-size: 14px;
+    }
+    
+    .first .podium-name {
+        font-size: 16px;
+    }
+    
+    .podium-medal {
+        font-size: 24px;
+    }
+}
+</style>
+
+<script>
+function createConfetti() {
+    var container = document.getElementById('confetti-container');
+    var colors = ['#FFD700', '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD', '#98D8C8'];
+    var shapes = ['square', 'circle'];
+    
+    for (var i = 0; i < 150; i++) {
+        setTimeout(function() {
+            var confetti = document.createElement('div');
+            confetti.className = 'confetti';
+            confetti.style.left = Math.random() * 100 + '%';
+            confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+            confetti.style.animationDuration = (2 + Math.random() * 2) + 's';
+            confetti.style.animationDelay = Math.random() * 0.5 + 's';
+            
+            if (shapes[Math.floor(Math.random() * shapes.length)] === 'circle') {
+                confetti.style.borderRadius = '50%';
+            }
+            
+            confetti.style.width = (5 + Math.random() * 10) + 'px';
+            confetti.style.height = (5 + Math.random() * 10) + 'px';
+            
+            container.appendChild(confetti);
+            
+            setTimeout(function() {
+                if (confetti.parentNode) {
+                    confetti.parentNode.removeChild(confetti);
+                }
+            }, 4000);
+        }, i * 20);
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    createConfetti();
+});
+</script>
+{% endblock %}

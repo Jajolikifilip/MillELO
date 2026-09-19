@@ -1,0 +1,55 @@
+
+{% extends "base.html" %}
+
+{% block title %}Login - MillELO.com{% endblock %}
+
+{% block content %}
+<div style="max-width: 400px; margin: 50px auto;">
+    <div class="card">
+        <h2 style="text-align: center; margin-bottom: 30px; color: #f0d060;">
+            <i class="fas fa-sign-in-alt"></i> Login
+        </h2>
+        
+        <form method="POST" id="login-form">
+            <div class="form-group">
+                <label for="username">Username:</label>
+                <input type="text" id="username" name="username" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="password">Password:</label>
+                <div style="position: relative;">
+                    <input type="password" id="password" name="password" required style="padding-right: 45px;">
+                    <button type="button" onclick="togglePasswordVisibility('password', 'toggle-icon')" 
+                            style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); 
+                                   background: none; border: none; color: #888; cursor: pointer; padding: 5px;">
+                        <i id="toggle-icon" class="fas fa-eye"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <button type="submit" class="btn" style="width: 100%; margin-top: 20px;">
+                Login
+            </button>
+        </form>
+        
+        <div style="text-align: center; margin-top: 20px;">
+            <p>Don't have an account? <a href="{{ url_for('signup') }}" style="color: #3893e8;">Sign up here</a></p>
+        </div>
+    </div>
+</div>
+
+<script>
+function togglePasswordVisibility(inputId, iconId) {
+    var input = document.getElementById(inputId);
+    var icon = document.getElementById(iconId);
+    if (input.type === 'password') {
+        input.type = 'text';
+        icon.className = 'fas fa-eye-slash';
+    } else {
+        input.type = 'password';
+        icon.className = 'fas fa-eye';
+    }
+}
+</script>
+{% endblock %}

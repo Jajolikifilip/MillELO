@@ -1,0 +1,82 @@
+
+{% extends "base.html" %}
+
+{% block title %}Sign Up - MillELO.com{% endblock %}
+
+{% block content %}
+<div style="max-width: 400px; margin: 50px auto;">
+    <div class="card">
+        <h2 style="text-align: center; margin-bottom: 30px; color: #f0d060;">
+            <i class="fas fa-user-plus"></i> Sign Up
+        </h2>
+        
+        <form method="POST" id="signup-form">
+            <div class="form-group">
+                <label for="username">Username:</label>
+                <input type="text" id="username" name="username" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="password">Password:</label>
+                <div style="position: relative;">
+                    <input type="password" id="password" name="password" required style="padding-right: 45px;">
+                    <button type="button" onclick="togglePasswordVisibility('password', 'toggle-icon')" 
+                            style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); 
+                                   background: none; border: none; color: #888; cursor: pointer; padding: 5px;">
+                        <i id="toggle-icon" class="fas fa-eye"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="form-group" style="margin-top: 20px; padding: 15px; background: rgba(56, 147, 232, 0.1); border-radius: 8px; border: 1px solid rgba(56, 147, 232, 0.3);">
+                <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; margin-bottom: 10px;">
+                    <input type="checkbox" id="enable-2fa" name="enable_2fa" onchange="toggle2FAFields()" style="width: auto;">
+                    <span><i class="fas fa-shield-alt" style="color: #3893e8;"></i> Enable Email Protection (2FA)</span>
+                </label>
+                <p style="font-size: 12px; color: #888; margin: 0;">Receive a 6-digit code via email when logging in for extra security.</p>
+                
+                <div id="email-field" style="display: none; margin-top: 15px;">
+                    <label for="email">Email Address:</label>
+                    <input type="email" id="email" name="email" placeholder="your@email.com">
+                </div>
+            </div>
+            
+            <button type="submit" class="btn" style="width: 100%; margin-top: 20px;">
+                Create Account
+            </button>
+        </form>
+        
+        <div style="text-align: center; margin-top: 20px;">
+            <p>Already have an account? <a href="{{ url_for('login') }}" style="color: #3893e8;">Login here</a></p>
+        </div>
+    </div>
+</div>
+
+<script>
+function togglePasswordVisibility(inputId, iconId) {
+    var input = document.getElementById(inputId);
+    var icon = document.getElementById(iconId);
+    if (input.type === 'password') {
+        input.type = 'text';
+        icon.className = 'fas fa-eye-slash';
+    } else {
+        input.type = 'password';
+        icon.className = 'fas fa-eye';
+    }
+}
+
+function toggle2FAFields() {
+    var checkbox = document.getElementById('enable-2fa');
+    var emailField = document.getElementById('email-field');
+    var emailInput = document.getElementById('email');
+    
+    if (checkbox.checked) {
+        emailField.style.display = 'block';
+        emailInput.required = true;
+    } else {
+        emailField.style.display = 'none';
+        emailInput.required = false;
+    }
+}
+</script>
+{% endblock %}

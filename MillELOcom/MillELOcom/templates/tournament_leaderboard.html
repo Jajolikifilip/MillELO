@@ -1,0 +1,2751 @@
+
+{% extends "base.html" %}
+
+{% block title %}{{ tournament.name }} - Leaderboard{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 20px;">
+    <h2 style="color: {{ tournament.color }}; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+        <!-- Tournament action buttons - shown based on join status and tournament state -->
+        <div id="tournament-actions" 
+             data-joined="{{ 'true' if session.username in tournament.players else 'false' }}"
+             data-start-time="{{ tournament.start_time }}"
+             data-end-time="{{ tournament.end_time }}"
+             data-tournament-id="{{ tournament.id }}"
+             data-is-paused="{{ 'true' if session.username in paused_users else 'false' }}"
+             style="display: flex; gap: 8px;">
+            
+            <!-- Join button - shown when not joined -->
+            <button onclick="joinTournament('{{ tournament.id }}')" class="btn btn-primary" style="padding: 5px 10px; font-size: 14px; display: none;" id="join-btn">
+                <i class="fas fa-sign-in-alt"></i>
+                <span>Join</span>
+            </button>
+            
+            <!-- Leave button - shown when joined but tournament not started -->
+            <button onclick="leaveTournament('{{ tournament.id }}')" class="btn btn-danger" style="padding: 5px 10px; font-size: 14px; display: none;" id="leave-btn">
+                <i class="fas fa-sign-out-alt"></i>
+                <span>Leave</span>
+            </button>
+            
+            <!-- Pause button - shown when joined and tournament is active -->
+            <button onclick="pauseTournament('{{ tournament.id }}')" class="btn btn-secondary" style="padding: 5px 10px; font-size: 14px; display: none; {% if session.username in paused_users %}background: #28a745; border-color: #28a745; border-radius: 50px;{% endif %}" id="pause-btn">
+                <i class="fas {% if session.username in paused_users %}fa-play{% else %}fa-pause{% endif %}" id="pause-icon"></i>
+                <span id="pause-text">{% if session.username in paused_users %}Continue{% else %}Pause{% endif %}</span>
+            </button>
+            
+            <!-- Mobile Chat Button (near title) -->
+            <button class="mobile-chat-btn-header" id="mobile-chat-btn" onclick="toggleMobileTournamentChat()" style="display: none;">
+                <i class="fas fa-comments"></i>
+            </button>
+        </div>
+        
+        {% if tournament.admin_only %}
+        <i class="fas fa-crown" style="color: #000; text-shadow: 0 0 10px rgba(255,255,255,0.9), 0 0 20px rgba(255,255,255,0.6);"></i>
+        <span style="text-shadow: 0 0 10px rgba(255,255,255,0.9), 0 0 20px rgba(255,255,255,0.6);">{{ tournament.name }}</span>
+        {% else %}
+        <i class="fas fa-trophy"></i> {{ tournament.name }}
+        {% endif %}
+    </h2>
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div class="tournament-timer" data-start-time="{{ tournament.start_time }}" data-end-time="{{ tournament.end_time }}" style="font-size: 18px;">
+            Calculating...
+        </div>
+    </div>
+</div>
+
+<!-- Mini Board Hover Preview -->
+<div id="mini-board-preview" class="mini-board-preview">
+    <div class="preview-header">
+        <span class="live-badge"><i class="fas fa-circle" style="font-size: 6px;"></i> LIVE</span>
+        <span id="preview-players" style="font-size: 11px; color: #aaa;"></span>
+    </div>
+    <div class="board-grid" id="preview-board"></div>
+    <div style="margin-top: 6px; text-align: center; font-size: 10px; color: #888;">Click to spectate</div>
+</div>
+
+<!-- Player Hover Card (Lichess-style) -->
+<div id="player-hover-card" class="player-hover-card">
+    <div class="hover-card-header">
+        <span id="hover-card-online" class="online-indicator offline"></span>
+        <span id="hover-card-title" class="hover-card-title-badge"></span>
+        <a id="hover-card-name" href="#" class="hover-card-name"></a>
+    </div>
+    <div class="hover-card-ratings">
+        <div class="rating-item">
+            <i class="fas fa-bolt" style="color: #f39c12;"></i>
+            <span>Bullet</span>
+            <strong id="hover-card-bullet">-</strong>
+        </div>
+        <div class="rating-item">
+            <i class="fas fa-fire" style="color: #e74c3c;"></i>
+            <span>Blitz</span>
+            <strong id="hover-card-blitz">-</strong>
+        </div>
+    </div>
+    <div id="hover-card-game" class="hover-card-game" style="display: none;">
+        <div class="hover-game-header">
+            <span class="live-badge"><i class="fas fa-circle" style="font-size: 6px;"></i> LIVE</span>
+            <span id="hover-game-players" style="font-size: 10px;"></span>
+        </div>
+        <div class="hover-game-board" id="hover-game-board"></div>
+        <div style="text-align: center; font-size: 9px; color: #888; margin-top: 4px;">Click board to watch</div>
+    </div>
+</div>
+
+<!-- Player Games Popup (Lichess-style slide-in panel) -->
+<div id="player-games-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000;" onclick="closePlayerGamesPopup()">
+    <div id="player-games-panel" style="position: absolute; top: 0; left: 0; width: 320px; max-width: 90vw; height: 100%; background: #1a1a1a; box-shadow: 4px 0 20px rgba(0,0,0,0.5); overflow-y: auto; transform: translateX(-100%); transition: transform 0.3s ease;" onclick="event.stopPropagation()">
+        <div style="padding: 15px; border-bottom: 1px solid #333;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <span id="popup-player-rank" style="font-size: 20px; font-weight: bold; color: #f0d060;"></span>
+                    <span id="popup-player-title" class="player-title" style="display: none; font-size: 11px; padding: 2px 6px; border-radius: 3px; margin-right: 5px;"></span>
+                    <span id="popup-player-crown" style="display: none;"><i class="fas fa-crown" style="color: #1a1a1a; text-shadow: 0 0 2px #fff, 0 0 4px #fff, 0 0 10px rgba(0,0,0,0.95); font-size: 14px; margin-right: 5px;"></i></span>
+                    <span id="popup-player-dragon" style="display: none;"><i class="fas fa-dragon" style="color: #FFD700; text-shadow: 0 0 10px #FF8C00, 0 0 20px #FF4500; font-size: 14px; margin-right: 5px;"></i></span>
+                    <span id="popup-player-galaxy" style="display: none;"><span class="galaxy-black-hole galaxy-black-hole-md" style="margin-right: 5px;"></span></span>
+                    <span id="popup-player-creator" style="display: none;"><span class="creator-cloud-aura creator-cloud-aura-sm" id="popup-player-creator-cloud"></span></span>
+                    <span id="popup-player-badges" style="display: none; font-size: 11px; font-weight: bold;"></span>
+                    <h3 id="popup-player-name" style="margin: 0; font-size: 18px; color: #fff;"></h3>
+                </div>
+                <button onclick="closePlayerGamesPopup()" style="background: none; border: none; color: #888; font-size: 24px; cursor: pointer; padding: 0 5px;">&times;</button>
+            </div>
+            <div id="popup-player-score" style="color: #aaa; font-size: 13px; margin-top: 8px; display: flex; gap: 15px;"></div>
+        </div>
+        <div id="popup-games-list" style="padding: 10px;">
+            <div style="text-align: center; padding: 20px; color: #888;">Loading...</div>
+        </div>
+    </div>
+</div>
+
+<!-- Tournament Featured Game (Top Player's Game) -->
+<div class="card" id="tournament-featured-card" style="background: rgba(0, 0, 0, 0.3); border: 1px solid #3c3c3c; margin-bottom: 20px; display: none;">
+    <h3 style="display: flex; align-items: center; gap: 10px;">
+        <i class="fas fa-star" style="color: #f0d060;"></i> 
+        <span>Featured Game</span>
+        <span class="live-badge" style="background: #e74c3c; color: #fff; padding: 2px 8px; border-radius: 10px; font-size: 10px; animation: pulse 2s infinite;">
+            <i class="fas fa-circle" style="font-size: 6px;"></i> LIVE
+        </span>
+    </h3>
+    <div id="tournament-featured-display" style="padding: 15px;">
+        <div style="display: flex; align-items: center; justify-content: center; gap: 30px; flex-wrap: wrap;">
+            <!-- White Player -->
+            <div style="text-align: center; min-width: 120px;">
+                <div id="tf-white-player" style="margin-bottom: 10px;">
+                    <span id="tf-white-title" class="player-title" style="display: none; font-size: 11px; padding: 2px 6px; border-radius: 3px; margin-right: 5px;"></span>
+                    <span id="tf-white-crown" style="display: none;"><i class="fas fa-crown" style="color: #1a1a1a; text-shadow: 0 0 2px #fff, 0 0 4px #fff, 0 0 10px rgba(0,0,0,0.95); font-size: 12px; margin-right: 4px;"></i></span>
+                    <span id="tf-white-dragon" style="display: none;"><i class="fas fa-dragon" style="color: #FFD700; text-shadow: 0 0 10px #FF8C00, 0 0 20px #FF4500; font-size: 12px; margin-right: 4px;"></i></span>
+                    <span id="tf-white-galaxy" style="display: none;"><span class="galaxy-black-hole galaxy-black-hole-sm" style="margin-right: 4px;"></span></span>
+                    <a id="tf-white-name" href="#" style="color: #fff; text-decoration: none; font-weight: bold; font-size: 16px;"></a>
+                    <span id="tf-white-rating" style="color: #888; font-size: 13px; margin-left: 5px;"></span>
+                </div>
+                <div id="tf-white-timer" style="font-family: monospace; font-size: 28px; font-weight: bold; color: #fff; background: #333; padding: 8px 16px; border-radius: 5px; display: inline-block; min-width: 80px;">0:00</div>
+            </div>
+            
+            <!-- Featured Board (larger than lobby) -->
+            <div id="tournament-featured-board" onclick="watchTournamentFeaturedGame()" style="width: 280px; height: 280px; background: #2d2a24; border-radius: 8px; cursor: pointer; position: relative; box-shadow: 0 4px 15px rgba(0,0,0,0.4);" title="Click to spectate">
+            </div>
+            
+            <!-- Black Player -->
+            <div style="text-align: center; min-width: 120px;">
+                <div id="tf-black-player" style="margin-bottom: 10px;">
+                    <span id="tf-black-title" class="player-title" style="display: none; font-size: 11px; padding: 2px 6px; border-radius: 3px; margin-right: 5px;"></span>
+                    <span id="tf-black-crown" style="display: none;"><i class="fas fa-crown" style="color: #1a1a1a; text-shadow: 0 0 2px #fff, 0 0 4px #fff, 0 0 10px rgba(0,0,0,0.95); font-size: 12px; margin-right: 4px;"></i></span>
+                    <span id="tf-black-dragon" style="display: none;"><i class="fas fa-dragon" style="color: #FFD700; text-shadow: 0 0 10px #FF8C00, 0 0 20px #FF4500; font-size: 12px; margin-right: 4px;"></i></span>
+                    <span id="tf-black-galaxy" style="display: none;"><span class="galaxy-black-hole galaxy-black-hole-sm" style="margin-right: 4px;"></span></span>
+                    <a id="tf-black-name" href="#" style="color: #888; text-decoration: none; font-weight: bold; font-size: 16px;"></a>
+                    <span id="tf-black-rating" style="color: #888; font-size: 13px; margin-left: 5px;"></span>
+                </div>
+                <div id="tf-black-timer" style="font-family: monospace; font-size: 28px; font-weight: bold; color: #888; background: #333; padding: 8px 16px; border-radius: 5px; display: inline-block; min-width: 80px;">0:00</div>
+            </div>
+        </div>
+        <div style="text-align: center; padding: 10px; margin-top: 10px;">
+            <span id="tf-time-control" style="font-size: 12px; color: #888;"></span>
+            <span style="margin: 0 10px; color: #555;">|</span>
+            <span style="font-size: 12px; color: #f0d060;"><i class="fas fa-eye"></i> Click board to spectate</span>
+        </div>
+    </div>
+</div>
+
+{% if tournament.status == 'finished' and players|length >= 1 %}
+<style>
+.podium-section {
+    margin: 30px 0;
+    padding: 20px;
+    background: linear-gradient(180deg, rgba(255,215,0,0.05) 0%, transparent 100%);
+    border-radius: 12px;
+}
+
+.podium-container {
+    display: flex;
+    justify-content: center;
+    align-items: flex-end;
+    gap: 10px;
+    padding: 20px 0;
+}
+
+.podium-place {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 120px;
+}
+
+.podium-player {
+    text-align: center;
+    padding: 15px 10px;
+    animation: podium-appear 0.5s ease-out forwards;
+    opacity: 0;
+}
+
+.first .podium-player { animation-delay: 0.3s; }
+.second .podium-player { animation-delay: 0.5s; }
+.third .podium-player { animation-delay: 0.7s; }
+
+@keyframes podium-appear {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.podium-medal {
+    font-size: 32px;
+    margin-bottom: 8px;
+}
+
+.podium-medal.gold { color: #FFD700; text-shadow: 0 0 10px rgba(255,215,0,0.5); }
+.podium-medal.silver { color: #C0C0C0; text-shadow: 0 0 10px rgba(192,192,192,0.5); }
+.podium-medal.bronze { color: #CD7F32; text-shadow: 0 0 10px rgba(205,127,50,0.5); }
+
+.podium-rank {
+    font-size: 14px;
+    font-weight: bold;
+    color: #888;
+    margin-bottom: 5px;
+}
+
+.podium-name {
+    font-size: 18px;
+    font-weight: bold;
+    margin-bottom: 4px;
+    word-break: break-word;
+}
+
+.first .podium-name { font-size: 22px; }
+
+.podium-rating {
+    font-size: 14px;
+    color: #888;
+    margin-bottom: 8px;
+}
+
+.first .podium-rating { font-size: 16px; }
+
+.podium-stats {
+    font-size: 12px;
+    color: #888;
+    line-height: 1.6;
+}
+
+.podium-score {
+    font-size: 16px;
+    font-weight: bold;
+    color: #f1c40f;
+}
+
+.first .podium-score { font-size: 20px; }
+
+.podium-stand {
+    width: 100%;
+    border-radius: 8px 8px 0 0;
+    animation: stand-rise 0.5s ease-out forwards;
+    transform-origin: bottom;
+    transform: scaleY(0);
+}
+
+.stand-1 {
+    height: 100px;
+    background: linear-gradient(180deg, #FFD700, #B8860B);
+    animation-delay: 0.1s;
+}
+
+.stand-2 {
+    height: 70px;
+    background: linear-gradient(180deg, #C0C0C0, #808080);
+    animation-delay: 0.2s;
+}
+
+.stand-3 {
+    height: 50px;
+    background: linear-gradient(180deg, #CD7F32, #8B4513);
+    animation-delay: 0.3s;
+}
+
+@keyframes stand-rise {
+    from { transform: scaleY(0); }
+    to { transform: scaleY(1); }
+}
+
+@media (max-width: 600px) {
+    .podium-container {
+        gap: 5px;
+    }
+    
+    .podium-place {
+        min-width: 90px;
+    }
+    
+    .podium-name {
+        font-size: 14px;
+    }
+    
+    .first .podium-name {
+        font-size: 16px;
+    }
+    
+    .podium-medal {
+        font-size: 24px;
+    }
+}
+</style>
+<div id="confetti-container"></div>
+<div class="card podium-section" style="background: rgba(0, 0, 0, 0.3); border: 2px solid #FFD700; margin-bottom: 20px;">
+    <h3 style="text-align: center; margin-bottom: 30px; color: #FFD700;"><i class="fas fa-trophy"></i> Tournament Results</h3>
+    
+    <div class="podium-container">
+        {% set time_control = tournament.time_control|default('3+2') %}
+        {% set base_time = time_control.split('+')[0]|int %}
+        {% set rating_type = 'bullet_rating' if base_time <= 2 else 'blitz_rating' %}
+        
+        {% if players|length >= 2 %}
+        <div class="podium-place second">
+            <div class="podium-player">
+                <div class="podium-medal silver"><i class="fas fa-medal"></i></div>
+                <div class="podium-rank">2nd</div>
+                <div class="podium-name" style="color: {{ get_ranking_color(players[1][0]) or (users[players[1][0]].color if users and players[1][0] in users else '#c9c9c9') }};">
+                    {{ players[1][0] }}
+                </div>
+                <div class="podium-rating">{{ users[players[1][0]][rating_type]|default(1500) if users and players[1][0] in users else 1500 }}</div>
+                <div class="podium-stats">
+                    <div class="podium-score">{{ players[1][1].score }} pts</div>
+                    <div class="podium-games">{{ players[1][1].games_played }} games</div>
+                    {% set wins = players[1][1].wins|default([])|length %}
+                    {% set games = players[1][1].games_played|default(1) %}
+                    <div class="podium-winrate">{{ ((wins / games) * 100)|round|int if games > 0 else 0 }}% wins</div>
+                </div>
+            </div>
+            <div class="podium-stand stand-2"></div>
+        </div>
+        {% endif %}
+        
+        <div class="podium-place first">
+            <div class="podium-player">
+                <div class="podium-medal gold"><i class="fas fa-crown"></i></div>
+                <div class="podium-rank">1st</div>
+                <div class="podium-name" style="color: {{ get_ranking_color(players[0][0]) or (users[players[0][0]].color if users and players[0][0] in users else '#c9c9c9') }};">
+                    {{ players[0][0] }}
+                </div>
+                <div class="podium-rating">{{ users[players[0][0]][rating_type]|default(1500) if users and players[0][0] in users else 1500 }}</div>
+                <div class="podium-stats">
+                    <div class="podium-score">{{ players[0][1].score }} pts</div>
+                    <div class="podium-games">{{ players[0][1].games_played }} games</div>
+                    {% set wins = players[0][1].wins|default([])|length %}
+                    {% set games = players[0][1].games_played|default(1) %}
+                    <div class="podium-winrate">{{ ((wins / games) * 100)|round|int if games > 0 else 0 }}% wins</div>
+                </div>
+            </div>
+            <div class="podium-stand stand-1"></div>
+        </div>
+        
+        {% if players|length >= 3 %}
+        <div class="podium-place third">
+            <div class="podium-player">
+                <div class="podium-medal bronze"><i class="fas fa-medal"></i></div>
+                <div class="podium-rank">3rd</div>
+                <div class="podium-name" style="color: {{ get_ranking_color(players[2][0]) or (users[players[2][0]].color if users and players[2][0] in users else '#c9c9c9') }};">
+                    {{ players[2][0] }}
+                </div>
+                <div class="podium-rating">{{ users[players[2][0]][rating_type]|default(1500) if users and players[2][0] in users else 1500 }}</div>
+                <div class="podium-stats">
+                    <div class="podium-score">{{ players[2][1].score }} pts</div>
+                    <div class="podium-games">{{ players[2][1].games_played }} games</div>
+                    {% set wins = players[2][1].wins|default([])|length %}
+                    {% set games = players[2][1].games_played|default(1) %}
+                    <div class="podium-winrate">{{ ((wins / games) * 100)|round|int if games > 0 else 0 }}% wins</div>
+                </div>
+            </div>
+            <div class="podium-stand stand-3"></div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+<!-- Tournament Layout: Chat + Leaderboard -->
+<div class="tournament-layout">
+    <!-- Tournament Chat Panel (PC: left side) -->
+    <div class="tournament-chat-panel" id="tournament-chat-panel">
+        <div class="tournament-chat-header">
+            <i class="fas fa-comments"></i> Tournament Chat
+            <button class="chat-close-btn" onclick="closeTournamentChat()"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="tournament-chat-messages" id="tournament-chat-messages"></div>
+        <div class="tournament-chat-input-row">
+            <input type="text" id="tournament-chat-input" placeholder="Message..." maxlength="200" onkeypress="if(event.key==='Enter')sendTournamentChat()">
+            <button onclick="sendTournamentChat()" class="chat-send-btn"><i class="fas fa-paper-plane"></i></button>
+        </div>
+    </div>
+    
+    <!-- Leaderboard -->
+    <div class="leaderboard-section">
+        <div class="card" id="leaderboard-card" style="background: rgba(0, 0, 0, 0.3); border: 1px solid #3c3c3c;">
+            <h3><i class="fas fa-list-ol"></i> {% if tournament.status == 'finished' %}Final Standings{% else %}Live Leaderboard{% endif %}</h3>
+    {% if tournament.players %}
+    <div style="margin-top: 15px;">
+        {# Use pre-sorted players from server (sorted by score, then by ELO for tie-breaking) #}
+        {% for username, data in players %}
+        <div class="leaderboard-entry player-row" data-rank="{{ loop.index }}" style="padding: 8px 12px; margin: 0 -12px; border-bottom: 1px solid rgba(60, 60, 60, 0.3); cursor: pointer; border-radius: 4px; transition: background 0.15s ease;" onclick="showPlayerGames('{{ username }}', {{ loop.index }}, event)">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <!-- Position -->
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <span style="font-size: 16px; font-weight: bold; color: {{ tournament.color }}; min-width: 20px;">
+                        {{ loop.index }}
+                    </span>
+                    
+                    <!-- Player info with title and ELO -->
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                        <i class="fas fa-pause" id="leaderboard-pause-{{ username }}" style="color: #ffc107; font-size: 12px; {% if username not in paused_users %}display: none;{% endif %}" title="Paused"></i>
+                        {% if users[username] %}
+                            {% set user_data = users[username] %}
+                            {% set rating_type = 'bullet' if tournament.time_control and tournament.time_control.split('+')[0]|int <= 2 else 'blitz' %}
+                            {% set player_rating = user_data.get(rating_type + '_rating', 1500) %}
+                            {% set title, title_color = get_title(player_rating, user_data) %}
+                            {% if title %}
+                            <span style="background: {{ title_color }}; color: white; padding: 2px 4px; border-radius: 2px; font-size: 10px; font-weight: bold;">
+                                {{ title }}
+                            </span>
+                            {% endif %}
+                            {% if user_data.admin_rank == 'admin' %}
+                            <i class="fas fa-crown" style="color: #1a1a1a; text-shadow: 0 0 2px #fff, 0 0 4px #fff, 0 0 15px rgba(0,0,0,0.95), 0 0 25px rgba(0,0,0,0.85), 0 0 40px rgba(0,0,0,0.7); font-size: 11px;"></i>
+                            {% elif user_data.admin_rank == 'dragon' %}
+                            <i class="fas fa-dragon" style="color: #FFD700; text-shadow: 0 0 10px #FF8C00, 0 0 20px #FF4500, 0 0 30px #FF6600; font-size: 11px;"></i>
+                            {% elif user_data.admin_rank == 'galaxy' %}
+                            <span class="galaxy-black-hole galaxy-black-hole-sm" style="margin-right: 2px;"></span>
+                            {% endif %}
+                        {% else %}
+                            {% set player_rating = 1500 %}
+                        {% endif %}
+                        {% if user_data and user_data.admin_rank == 'creator' %}
+                        <a href="{{ url_for('profile', username=username) }}" class="player-username-link" data-username="{{ username }}" style="text-decoration: none;" onclick="event.stopPropagation()">
+                            <span class="creator-cloud-aura creator-cloud-aura-sm">{{ username }}</span>
+                        </a>
+                        {% else %}
+                        <a href="{{ url_for('profile', username=username) }}" class="player-username-link" data-username="{{ username }}" style="color: {{ get_ranking_color(username) or (users[username].color if users[username] else '#c9c9c9') }}; text-decoration: none; font-size: 14px; {% if user_data and user_data.admin_rank == 'dragon' %}text-shadow: 0 0 8px #FFD700, 0 0 12px #FFD700, 0 0 18px #FF8C00, 0 0 25px #FF8C00;{% elif user_data and user_data.admin_rank == 'galaxy' %}text-shadow: 0 0 8px #9400D3, 0 0 15px #8A2BE2, 0 0 25px #4B0082, 0 0 35px #9400D3;{% endif %}" onclick="event.stopPropagation()">
+                            {{ username }}
+                        </a>
+                        {% endif %}
+                        <span id="elo-{{ username }}" style="color: #888; font-size: 12px;">
+                            {{ player_rating }}
+                        </span>
+                    </div>
+                </div>
+                
+                <!-- Points -->
+                <div style="text-align: right;">
+                    {% if tournament.status == 'scheduled' %}
+                    <span style="font-size: 16px; font-weight: bold; color: #f0d060;">
+                        0
+                    </span>
+                    {% else %}
+                    <span style="font-size: 16px; font-weight: bold; color: #f0d060;">
+                        {{ data.score|default(0) }}
+                    </span>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Visual Series Display (Lichess-style) -->
+            {% if data.series and data.series|length > 0 %}
+            <div class="series-display" style="margin-top: 6px; margin-left: 32px; font-family: monospace; font-size: 13px; font-weight: bold; line-height: 1.4; word-wrap: break-word; max-width: calc(100% - 40px);">
+                {% for game in data.series %}
+                    {% if game.type == 'win' %}
+                        {% if game.streak %}
+                            <span style="color: #ff9800;" title="Win with streak bonus">{{ game.points }}</span>
+                        {% else %}
+                            <span style="color: #4caf50;" title="Win">{{ game.points }}</span>
+                        {% endif %}
+                    {% elif game.type == 'draw' %}
+                        <span style="color: #e0e0e0;" title="Draw">{{ game.points }}</span>
+                    {% elif game.type == 'loss' %}
+                        <span style="color: #f44336;" title="Loss">{{ game.points }}</span>
+                    {% endif %}
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p style="opacity: 0.6; text-align: center; padding: 40px;">No players yet. Be the first to join!</p>
+    {% endif %}
+        </div>
+    </div>
+</div>
+
+{% if tournament.tournament_type == 'world_cup' %}
+<div class="card" style="margin-top: 20px; border: 2px solid #FFD700; background: linear-gradient(135deg, rgba(255, 215, 0, 0.1), rgba(255, 215, 0, 0.05));">
+    <h3 style="color: #FFD700;"><i class="fas fa-crown"></i> World Cup Prizes</h3>
+    <div style="margin-top: 15px;">
+        <div style="padding: 10px; border-left: 4px solid #FFD700;">
+            <strong>1st Place:</strong> Mill World Cup Winner {{ tournament.end_time[:4] }} Trophy
+            <br><small>Permanent trophy in profile + special title</small>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<div style="margin-top: 30px; text-align: center;">
+    <a href="{{ url_for('tournaments_page') }}" class="btn btn-secondary">
+        <i class="fas fa-arrow-left"></i> Back to Tournaments
+    </a>
+</div>
+
+<style>
+/* Tournament Layout */
+.tournament-layout {
+    display: flex;
+    gap: 15px;
+    align-items: flex-start;
+}
+
+.tournament-chat-panel {
+    width: 280px;
+    min-width: 250px;
+    background: rgba(30, 30, 30, 0.95);
+    border: 1px solid #3c3c3c;
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    height: 500px;
+}
+
+.tournament-chat-header {
+    padding: 10px 12px;
+    background: linear-gradient(135deg, #2c3e50 0%, #1a2a3a 100%);
+    border-bottom: 1px solid #3c3c3c;
+    border-radius: 8px 8px 0 0;
+    color: #5dade2;
+    font-weight: bold;
+    font-size: 13px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.chat-close-btn {
+    display: none;
+    background: none;
+    border: none;
+    color: #888;
+    cursor: pointer;
+    font-size: 16px;
+}
+
+.tournament-chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.tournament-chat-message {
+    font-size: 12px;
+    padding: 4px 0;
+    word-break: break-word;
+}
+
+.tournament-chat-message .chat-username {
+    font-weight: bold;
+    margin-right: 5px;
+}
+
+.creator-cloud-aura-chat {
+    display: inline-block;
+    position: relative;
+    padding: 2px 10px;
+    color: #000 !important;
+    font-weight: bold;
+    font-size: 11px;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 55'%3E%3Cpath d='M8 28 Q2 28 4 16 Q7 4 18 10 Q26 2 38 7 Q48 1 58 7 Q68 2 78 10 Q88 4 94 16 Q99 28 92 28 Q99 40 94 48 Q84 55 70 50 Q55 58 40 50 Q25 55 10 48 Q2 40 8 28 Z' fill='%23E8B923' stroke='%23000' stroke-width='2.5'/%3E%3C/svg%3E") no-repeat center center;
+    background-size: 100% 100%;
+    min-width: 40px;
+    min-height: 22px;
+    text-align: center;
+    line-height: 1.4;
+    vertical-align: middle;
+}
+
+.galaxy-black-hole-xs {
+    width: 12px;
+    height: 12px;
+    display: inline-block;
+    vertical-align: middle;
+}
+
+.tournament-chat-input-row {
+    display: flex;
+    gap: 6px;
+    padding: 8px;
+    border-top: 1px solid #3c3c3c;
+}
+
+.tournament-chat-input-row input {
+    flex: 1;
+    background: #2a2a2a;
+    border: 1px solid #444;
+    border-radius: 4px;
+    padding: 8px 10px;
+    color: #e0e0e0;
+    font-size: 12px;
+}
+
+.tournament-chat-input-row .chat-send-btn {
+    background: #4a90d9;
+    border: none;
+    border-radius: 4px;
+    padding: 8px 12px;
+    color: white;
+    cursor: pointer;
+}
+
+.tournament-chat-input-row .chat-send-btn:hover {
+    background: #5a9fea;
+}
+
+.leaderboard-section {
+    flex: 1;
+}
+
+/* Mobile Chat Button (header version) */
+.mobile-chat-btn-header {
+    display: none;
+    padding: 5px 10px;
+    background: linear-gradient(135deg, #4a90d9 0%, #3a80c9 100%);
+    border: none;
+    border-radius: 6px;
+    color: white;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+    .tournament-layout {
+        flex-direction: column;
+    }
+    
+    .tournament-chat-panel {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 2000;
+        border-radius: 0;
+        max-height: 100vh;
+    }
+    
+    .tournament-chat-panel.active {
+        display: flex;
+    }
+    
+    .chat-close-btn {
+        display: block;
+    }
+    
+    .mobile-chat-btn-header {
+        display: inline-flex !important;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .leaderboard-section {
+        width: 100%;
+    }
+}
+
+/* Player row hover effect */
+.player-row {
+    position: relative;
+}
+.player-row:hover {
+    background: rgba(255, 255, 255, 0.08) !important;
+}
+.player-row:active {
+    background: rgba(255, 255, 255, 0.12) !important;
+}
+
+/* Game row hover effects in popup */
+.popup-game-row {
+    display: flex;
+    align-items: center;
+    padding: 10px;
+    border-bottom: 1px solid #333;
+    transition: background 0.15s ease, transform 0.1s ease;
+}
+.popup-game-row:hover {
+    background: rgba(255, 255, 255, 0.08) !important;
+}
+.popup-game-row:active {
+    background: rgba(255, 255, 255, 0.15) !important;
+    transform: scale(0.99);
+}
+.popup-game-row.clickable {
+    cursor: pointer;
+}
+.popup-game-row.live-game {
+    background: linear-gradient(90deg, rgba(240, 208, 96, 0.15), transparent);
+}
+.popup-game-row.live-game:hover {
+    background: linear-gradient(90deg, rgba(240, 208, 96, 0.25), rgba(255, 255, 255, 0.05)) !important;
+}
+.popup-game-row.win-game:hover {
+    background: rgba(76, 175, 80, 0.15) !important;
+}
+.popup-game-row.loss-game:hover {
+    background: rgba(244, 67, 54, 0.15) !important;
+}
+.popup-game-row.draw-game:hover {
+    background: rgba(158, 158, 158, 0.15) !important;
+}
+
+/* Player Username Link Hover Effect (shiny/glow) */
+.player-username-link {
+    transition: all 0.2s ease;
+    position: relative;
+}
+.player-username-link:hover {
+    text-shadow: 0 0 8px currentColor, 0 0 15px currentColor;
+    filter: brightness(1.3);
+}
+
+/* Player Hover Card (Lichess-style) */
+.player-hover-card {
+    position: fixed;
+    background: #1a1a1a;
+    border: 1px solid #444;
+    border-radius: 8px;
+    padding: 12px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+    z-index: 2500;
+    pointer-events: auto;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(8px);
+    transition: opacity 0.2s, transform 0.2s, visibility 0.2s;
+    min-width: 180px;
+    max-width: 220px;
+}
+.player-hover-card.visible {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+.hover-card-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #333;
+}
+.online-indicator {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+    flex-shrink: 0;
+}
+.online-indicator.online {
+    background-color: #27ae60;
+    box-shadow: 0 0 4px #27ae60;
+}
+.online-indicator.offline {
+    background-color: #8b4513;
+}
+
+/* Tournament End Overlay */
+#tournament-end-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.95);
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+#end-confetti-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    overflow: hidden;
+}
+
+.end-confetti {
+    position: absolute;
+    top: -20px;
+    opacity: 0;
+    animation: confettiFall 3s ease-out forwards;
+}
+
+@keyframes confettiFall {
+    0% { opacity: 1; transform: translateY(0) rotate(0deg); }
+    100% { opacity: 0; transform: translateY(100vh) rotate(720deg); }
+}
+
+.end-overlay-content {
+    text-align: center;
+    z-index: 10001;
+    padding: 40px;
+    max-width: 700px;
+}
+
+.end-title {
+    font-size: 48px;
+    color: #FFD700;
+    margin-bottom: 10px;
+    text-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+    animation: pulseGold 1s ease-in-out infinite alternate;
+}
+
+@keyframes pulseGold {
+    from { text-shadow: 0 0 20px rgba(255, 215, 0, 0.5); }
+    to { text-shadow: 0 0 40px rgba(255, 215, 0, 0.8); }
+}
+
+.end-tournament-name {
+    font-size: 24px;
+    color: #fff;
+    margin-bottom: 40px;
+    opacity: 0.9;
+}
+
+.end-podium-container {
+    display: flex;
+    justify-content: center;
+    align-items: flex-end;
+    gap: 15px;
+    margin-bottom: 40px;
+}
+
+.end-podium-place {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.end-podium-player {
+    text-align: center;
+    padding: 15px;
+    opacity: 0;
+    animation: slideDown 0.5s ease-out forwards;
+}
+
+.first .end-podium-player { animation-delay: 0.3s; }
+.second .end-podium-player { animation-delay: 0.5s; }
+.third .end-podium-player { animation-delay: 0.7s; }
+
+@keyframes slideDown {
+    from { opacity: 0; transform: translateY(-30px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.end-medal {
+    font-size: 40px;
+    margin-bottom: 10px;
+}
+
+.end-medal.gold { color: #FFD700; text-shadow: 0 0 15px rgba(255, 215, 0, 0.6); }
+.end-medal.silver { color: #C0C0C0; text-shadow: 0 0 15px rgba(192, 192, 192, 0.6); }
+.end-medal.bronze { color: #CD7F32; text-shadow: 0 0 15px rgba(205, 127, 50, 0.6); }
+
+.end-rank {
+    font-size: 14px;
+    color: #888;
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+.end-name {
+    font-size: 20px;
+    font-weight: bold;
+    margin-bottom: 4px;
+}
+
+.first .end-name { font-size: 26px; }
+
+.end-rating {
+    font-size: 14px;
+    color: #888;
+    margin-bottom: 8px;
+}
+
+.first .end-rating { font-size: 16px; }
+
+.end-stats {
+    font-size: 13px;
+    color: #aaa;
+}
+
+.end-stand {
+    width: 120px;
+    border-radius: 8px 8px 0 0;
+    transform: scaleY(0);
+    transform-origin: bottom;
+    transition: transform 0.5s ease-out;
+}
+
+.end-stand.animate {
+    transform: scaleY(1);
+}
+
+.end-stand.stand-1 {
+    height: 100px;
+    background: linear-gradient(180deg, #FFD700, #B8860B);
+    transition-delay: 0.1s;
+}
+
+.end-stand.stand-2 {
+    height: 70px;
+    background: linear-gradient(180deg, #C0C0C0, #808080);
+    transition-delay: 0.2s;
+}
+
+.end-stand.stand-3 {
+    height: 50px;
+    background: linear-gradient(180deg, #CD7F32, #8B4513);
+    transition-delay: 0.3s;
+}
+
+.end-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    flex-wrap: wrap;
+}
+
+.end-btn {
+    padding: 15px 30px;
+    font-size: 16px;
+    text-decoration: none;
+}
+
+.end-btn.secondary {
+    background: #444;
+}
+
+.end-btn.secondary:hover {
+    background: #555;
+}
+
+@media (max-width: 600px) {
+    .end-title { font-size: 32px; }
+    .end-tournament-name { font-size: 18px; }
+    .end-podium-container { gap: 8px; }
+    .end-stand { width: 80px; }
+    .end-name { font-size: 14px; }
+    .first .end-name { font-size: 18px; }
+    .end-medal { font-size: 28px; }
+}
+
+.hover-card-title-badge {
+    background: #666;
+    color: white;
+    padding: 2px 5px;
+    border-radius: 3px;
+    font-size: 10px;
+    font-weight: bold;
+}
+.hover-card-name {
+    font-size: 14px;
+    font-weight: bold;
+    text-decoration: none;
+    color: #c9c9c9;
+}
+.hover-card-name:hover {
+    text-decoration: underline;
+}
+.hover-card-ratings {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 10px;
+}
+.hover-card-ratings .rating-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+}
+.hover-card-ratings .rating-item i {
+    font-size: 14px;
+}
+.hover-card-ratings .rating-item span {
+    font-size: 10px;
+    color: #888;
+}
+.hover-card-ratings .rating-item strong {
+    font-size: 14px;
+    color: #fff;
+}
+.hover-card-game {
+    background: #222;
+    border-radius: 6px;
+    padding: 8px;
+    margin-top: 8px;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+.hover-card-game:hover {
+    background: #2a2a2a;
+}
+.hover-game-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+}
+.hover-game-board {
+    width: 120px;
+    height: 120px;
+    position: relative;
+    margin: 0 auto;
+    background: #1a1a1a;
+    border-radius: 4px;
+}
+
+/* Pulse animation for LIVE indicator */
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+/* Mini board hover preview */
+.mini-board-preview {
+    position: fixed;
+    background: #1a1a1a;
+    border: 1px solid #444;
+    border-radius: 8px;
+    padding: 10px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+    z-index: 3000;
+    pointer-events: none;
+    opacity: 0;
+    transform: translateY(10px);
+    transition: opacity 0.2s, transform 0.2s;
+}
+.mini-board-preview.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+.mini-board-preview .board-grid {
+    width: 140px;
+    height: 140px;
+    position: relative;
+}
+.mini-board-preview .preview-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid #333;
+}
+.mini-board-preview .live-badge {
+    background: #4caf50;
+    color: white;
+    font-size: 10px;
+    font-weight: bold;
+    padding: 2px 6px;
+    border-radius: 3px;
+    animation: pulse 1.5s infinite;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+    /* Adjust leaderboard entries for mobile */
+    div[style*="padding: 8px 0"] {
+        padding: 6px 0 !important;
+    }
+    
+    /* Smaller position number on mobile */
+    div[style*="min-width: 20px"] {
+        min-width: 18px !important;
+        font-size: 14px !important;
+    }
+    
+    /* Username smaller on mobile */
+    a[style*="font-size: 14px"] {
+        font-size: 13px !important;
+    }
+    
+    /* Title badge smaller on mobile */
+    span[style*="font-size: 10px"] {
+        font-size: 9px !important;
+        padding: 1px 3px !important;
+    }
+    
+    /* Points smaller on mobile */
+    span[style*="font-size: 16px"] {
+        font-size: 14px !important;
+    }
+}
+</style>
+
+<script>
+// Server time for accurate status calculation (prevents client/server time mismatch)
+var serverNowStr = "{{ server_now }}";
+var serverNow = serverNowStr ? new Date(serverNowStr) : new Date();
+var clientNow = new Date();
+var serverClientOffset = isNaN(serverNow.getTime()) ? 0 : (serverNow.getTime() - clientNow.getTime());
+
+// Function to get current server time (adjusted for elapsed time since page load)
+function getServerTime() {
+    return new Date(Date.now() + serverClientOffset);
+}
+
+// Track join state locally (updates when user joins/leaves)
+var isJoined = false;
+
+// Tournament Chat Functions
+function sendTournamentChat() {
+    var input = document.getElementById('tournament-chat-input');
+    var message = input.value.trim();
+    
+    if (!message) {
+        return;
+    }
+    
+    console.log('Sending chat via HTTP POST:', message);
+    input.value = '';
+    
+    fetch('/api/tournament_chat', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            tournament_id: currentTournamentId,
+            message: message
+        })
+    })
+    .then(function(response) { return response.json(); })
+    .then(function(data) {
+        console.log('Chat sent successfully:', data);
+    })
+    .catch(function(err) {
+        console.error('Chat send error:', err);
+    });
+}
+
+function addTournamentChatMessage(msg) {
+    var container = document.getElementById('tournament-chat-messages');
+    if (!container) return;
+    
+    var div = document.createElement('div');
+    div.className = 'tournament-chat-message';
+    
+    var color = msg.color || '#c9c9c9';
+    var adminIcon = '';
+    var nameStyle = 'color: ' + color + ';';
+    var usernameHtml = '';
+    
+    // Build title and rating display
+    var titleHtml = '';
+    if (msg.title) {
+        titleHtml = '<span style="color: ' + (msg.title_color || '#888') + '; font-size: 10px; margin-right: 3px;">' + msg.title + '</span>';
+    }
+    var ratingHtml = '';
+    if (msg.rating) {
+        ratingHtml = '<span style="color: #888; font-size: 10px; margin-left: 2px;">(' + msg.rating + ')</span>';
+    }
+    
+    if (msg.admin_rank === 'admin') {
+        adminIcon = '<i class="fas fa-crown" style="color: #1a1a1a; text-shadow: 0 0 2px #fff, 0 0 4px #fff, 0 0 15px rgba(0,0,0,0.95); font-size: 10px; margin-right: 3px;"></i>';
+        usernameHtml = titleHtml + '<span class="chat-username" style="' + nameStyle + '">' + msg.username + '</span>' + ratingHtml + '<span style="color: ' + color + ';">:</span>';
+    } else if (msg.admin_rank === 'dragon') {
+        adminIcon = '<i class="fas fa-dragon" style="color: #FFD700; text-shadow: 0 0 8px #FFD700, 0 0 15px #FF8C00; font-size: 10px; margin-right: 3px;"></i>';
+        nameStyle += ' text-shadow: 0 0 6px rgba(255,215,0,0.8), 0 0 12px rgba(255,215,0,0.6), 0 0 20px rgba(255,140,0,0.5);';
+        usernameHtml = titleHtml + '<span class="chat-username" style="' + nameStyle + '">' + msg.username + '</span>' + ratingHtml + '<span style="color: ' + color + ';">:</span>';
+    } else if (msg.admin_rank === 'galaxy') {
+        adminIcon = '<span class="galaxy-black-hole galaxy-black-hole-xs" style="margin-right: 3px;"></span>';
+        nameStyle += ' text-shadow: 0 0 8px #9400D3, 0 0 15px #8A2BE2, 0 0 25px #4B0082;';
+        usernameHtml = titleHtml + '<span class="chat-username" style="' + nameStyle + '">' + msg.username + '</span>' + ratingHtml + '<span style="color: ' + color + ';">:</span>';
+    } else if (msg.admin_rank === 'creator') {
+        usernameHtml = titleHtml + '<span class="creator-cloud-aura creator-cloud-aura-chat">' + msg.username + '</span>' + ratingHtml + '<span style="color: ' + color + ';">:</span>';
+    } else {
+        usernameHtml = titleHtml + '<span class="chat-username" style="' + nameStyle + '">' + msg.username + '</span>' + ratingHtml + '<span style="color: ' + color + ';">:</span>';
+    }
+    
+    div.innerHTML = adminIcon + usernameHtml + '<span style="color: #c9c9c9;"> ' + escapeHtml(msg.message) + '</span>';
+    container.appendChild(div);
+    container.scrollTop = container.scrollHeight;
+}
+
+function escapeHtml(text) {
+    var div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+window.toggleMobileTournamentChat = function() {
+    var panel = document.getElementById('tournament-chat-panel');
+    if (panel) {
+        panel.classList.toggle('active');
+    }
+};
+
+window.closeTournamentChat = function() {
+    var panel = document.getElementById('tournament-chat-panel');
+    if (panel) {
+        panel.classList.remove('active');
+    }
+};
+
+function loadTournamentChat() {
+    console.log('Loading tournament chat via HTTP for:', currentTournamentId);
+    fetch('/api/tournament_chat/' + currentTournamentId)
+    .then(function(response) { return response.json(); })
+    .then(function(data) {
+        console.log('Loaded chat history:', data.messages ? data.messages.length : 0, 'messages');
+        if (data.messages) {
+            data.messages.forEach(function(msg) {
+                addTournamentChatMessage(msg);
+            });
+        }
+    })
+    .catch(function(err) {
+        console.error('Error loading chat:', err);
+    });
+}
+
+// Tournament Featured Game Variables
+var currentTournamentId = "{{ tournament.id }}";
+var tournamentFeaturedGameId = null;
+var tfWhiteTime = 0;
+var tfBlackTime = 0;
+var tfActivePlayer = 'white';
+var tfTimerInterval = null;
+
+// Board positions for featured game (scaled for 280x280 board)
+var TF_BOARD_POSITIONS = [
+    {x: 35, y: 35}, {x: 140, y: 35}, {x: 245, y: 35},
+    {x: 70, y: 70}, {x: 140, y: 70}, {x: 210, y: 70},
+    {x: 105, y: 105}, {x: 140, y: 105}, {x: 175, y: 105},
+    {x: 35, y: 140}, {x: 70, y: 140}, {x: 105, y: 140},
+    {x: 175, y: 140}, {x: 210, y: 140}, {x: 245, y: 140},
+    {x: 105, y: 175}, {x: 140, y: 175}, {x: 175, y: 175},
+    {x: 70, y: 210}, {x: 140, y: 210}, {x: 210, y: 210},
+    {x: 35, y: 245}, {x: 140, y: 245}, {x: 245, y: 245}
+];
+
+function formatTfTime(seconds) {
+    var mins = Math.floor(seconds / 60);
+    var secs = Math.floor(seconds % 60);
+    return mins + ':' + (secs < 10 ? '0' : '') + secs;
+}
+
+function drawTournamentFeaturedBoard(board) {
+    var container = document.getElementById('tournament-featured-board');
+    if (!container) return;
+    
+    container.innerHTML = '';
+    
+    var svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('width', '280');
+    svg.setAttribute('height', '280');
+    svg.setAttribute('viewBox', '0 0 280 280');
+    svg.style.pointerEvents = 'none';
+    
+    var lineColor = '#555';
+    var lines = [
+        '35,35 245,35', '245,35 245,245', '245,245 35,245', '35,245 35,35',
+        '70,70 210,70', '210,70 210,210', '210,210 70,210', '70,210 70,70',
+        '105,105 175,105', '175,105 175,175', '175,175 105,175', '105,175 105,105',
+        '140,35 140,105', '175,140 245,140', '140,175 140,245', '35,140 105,140'
+    ];
+    
+    lines.forEach(function(points) {
+        var line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        var coords = points.split(' ');
+        var start = coords[0].split(',');
+        var end = coords[1].split(',');
+        line.setAttribute('x1', start[0]);
+        line.setAttribute('y1', start[1]);
+        line.setAttribute('x2', end[0]);
+        line.setAttribute('y2', end[1]);
+        line.setAttribute('stroke', lineColor);
+        line.setAttribute('stroke-width', '2');
+        svg.appendChild(line);
+    });
+    
+    for (var i = 0; i < 24; i++) {
+        var pos = TF_BOARD_POSITIONS[i];
+        
+        var point = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        point.setAttribute('cx', pos.x);
+        point.setAttribute('cy', pos.y);
+        point.setAttribute('r', '6');
+        point.setAttribute('fill', '#444');
+        svg.appendChild(point);
+        
+        if (board && board[i]) {
+            var piece = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            piece.setAttribute('cx', pos.x);
+            piece.setAttribute('cy', pos.y);
+            piece.setAttribute('r', '14');
+            var isWhite = board[i] === 'white' || board[i] === 1;
+            piece.setAttribute('fill', isWhite ? '#fff' : '#333');
+            piece.setAttribute('stroke', isWhite ? '#ccc' : '#666');
+            piece.setAttribute('stroke-width', '2');
+            svg.appendChild(piece);
+        }
+    }
+    
+    container.appendChild(svg);
+}
+
+function updateTournamentFeaturedTimers() {
+    if (tfActivePlayer === 'white') {
+        tfWhiteTime = Math.max(0, tfWhiteTime - 1);
+    } else {
+        tfBlackTime = Math.max(0, tfBlackTime - 1);
+    }
+    
+    document.getElementById('tf-white-timer').textContent = formatTfTime(tfWhiteTime);
+    document.getElementById('tf-black-timer').textContent = formatTfTime(tfBlackTime);
+}
+
+function updateTournamentFeaturedGame(data) {
+    var featuredCard = document.getElementById('tournament-featured-card');
+    
+    if (!data || !data.game_id) {
+        featuredCard.style.display = 'none';
+        tournamentFeaturedGameId = null;
+        if (tfTimerInterval) {
+            clearInterval(tfTimerInterval);
+            tfTimerInterval = null;
+        }
+        return;
+    }
+    
+    tournamentFeaturedGameId = data.game_id;
+    featuredCard.style.display = 'block';
+    
+    var whiteTitle = document.getElementById('tf-white-title');
+    if (data.white_title) {
+        whiteTitle.textContent = data.white_title;
+        whiteTitle.style.background = data.white_title_color || '#666';
+        whiteTitle.style.display = 'inline-block';
+    } else {
+        whiteTitle.style.display = 'none';
+    }
+    
+    var whiteName = document.getElementById('tf-white-name');
+    whiteName.textContent = data.white;
+    whiteName.style.color = data.white_color || '#fff';
+    whiteName.href = '/profile/' + data.white;
+    
+    // Show white admin crown, dragon, or galaxy
+    var whiteCrown = document.getElementById('tf-white-crown');
+    var whiteDragon = document.getElementById('tf-white-dragon');
+    var whiteGalaxy = document.getElementById('tf-white-galaxy');
+    if (whiteCrown) {
+        whiteCrown.style.display = data.white_admin_rank === 'admin' ? 'inline' : 'none';
+    }
+    if (whiteDragon) {
+        whiteDragon.style.display = data.white_admin_rank === 'dragon' ? 'inline' : 'none';
+    }
+    if (whiteGalaxy) {
+        whiteGalaxy.style.display = data.white_admin_rank === 'galaxy' ? 'inline' : 'none';
+    }
+    // Apply dragon/galaxy name glow
+    if (data.white_admin_rank === 'dragon') {
+        whiteName.style.textShadow = '0 0 8px #FFD700, 0 0 12px #FFD700, 0 0 18px #FF8C00, 0 0 25px #FF8C00';
+    } else if (data.white_admin_rank === 'galaxy') {
+        whiteName.style.textShadow = '0 0 8px #9400D3, 0 0 15px #8A2BE2, 0 0 25px #4B0082, 0 0 35px #9400D3';
+    } else {
+        whiteName.style.textShadow = '';
+    }
+    
+    document.getElementById('tf-white-rating').textContent = '(' + data.white_rating + ')';
+    
+    var blackTitle = document.getElementById('tf-black-title');
+    if (data.black_title) {
+        blackTitle.textContent = data.black_title;
+        blackTitle.style.background = data.black_title_color || '#666';
+        blackTitle.style.display = 'inline-block';
+    } else {
+        blackTitle.style.display = 'none';
+    }
+    
+    var blackName = document.getElementById('tf-black-name');
+    blackName.textContent = data.black;
+    blackName.style.color = data.black_color || '#888';
+    blackName.href = '/profile/' + data.black;
+    
+    // Show black admin crown, dragon, or galaxy
+    var blackCrown = document.getElementById('tf-black-crown');
+    var blackDragon = document.getElementById('tf-black-dragon');
+    var blackGalaxy = document.getElementById('tf-black-galaxy');
+    if (blackCrown) {
+        blackCrown.style.display = data.black_admin_rank === 'admin' ? 'inline' : 'none';
+    }
+    if (blackDragon) {
+        blackDragon.style.display = data.black_admin_rank === 'dragon' ? 'inline' : 'none';
+    }
+    if (blackGalaxy) {
+        blackGalaxy.style.display = data.black_admin_rank === 'galaxy' ? 'inline' : 'none';
+    }
+    // Apply dragon/galaxy name glow
+    if (data.black_admin_rank === 'dragon') {
+        blackName.style.textShadow = '0 0 8px #FFD700, 0 0 12px #FFD700, 0 0 18px #FF8C00, 0 0 25px #FF8C00';
+    } else if (data.black_admin_rank === 'galaxy') {
+        blackName.style.textShadow = '0 0 8px #9400D3, 0 0 15px #8A2BE2, 0 0 25px #4B0082, 0 0 35px #9400D3';
+    } else {
+        blackName.style.textShadow = '';
+    }
+    
+    document.getElementById('tf-black-rating').textContent = '(' + data.black_rating + ')';
+    
+    document.getElementById('tf-time-control').textContent = data.time_control;
+    
+    tfWhiteTime = data.white_time || 0;
+    tfBlackTime = data.black_time || 0;
+    tfActivePlayer = data.current_player || 'white';
+    
+    document.getElementById('tf-white-timer').textContent = formatTfTime(tfWhiteTime);
+    document.getElementById('tf-black-timer').textContent = formatTfTime(tfBlackTime);
+    
+    drawTournamentFeaturedBoard(data.board);
+    
+    if (!tfTimerInterval) {
+        tfTimerInterval = setInterval(updateTournamentFeaturedTimers, 1000);
+    }
+}
+
+function watchTournamentFeaturedGame() {
+    if (tournamentFeaturedGameId) {
+        window.location.href = '/play/' + tournamentFeaturedGameId + '?spectate=true';
+    }
+}
+
+function requestTournamentFeaturedGame() {
+    if (window.socket && window.socket.connected) {
+        window.socket.emit('get_tournament_featured_game', { tournament_id: currentTournamentId });
+    }
+}
+
+function updateActionButtons() {
+    const actionsDiv = document.getElementById('tournament-actions');
+    if (!actionsDiv) return;
+    
+    const startTime = actionsDiv.getAttribute('data-start-time');
+    const endTime = actionsDiv.getAttribute('data-end-time');
+    const joinedAttr = actionsDiv.getAttribute('data-joined');
+    
+    // Use the data attribute as source of truth (isJoined is only for immediate UI feedback)
+    const joined = joinedAttr === 'true';
+    
+    const now = getServerTime();
+    const start = new Date(startTime);
+    const end = new Date(endTime);
+    
+    const joinBtn = document.getElementById('join-btn');
+    const leaveBtn = document.getElementById('leave-btn');
+    const pauseBtn = document.getElementById('pause-btn');
+    
+    // Hide all buttons first
+    if (joinBtn) joinBtn.style.display = 'none';
+    if (leaveBtn) leaveBtn.style.display = 'none';
+    if (pauseBtn) pauseBtn.style.display = 'none';
+    
+    if (now >= end) {
+        // Tournament finished - no buttons
+        return;
+    }
+    
+    if (!joined) {
+        // Not joined - show Join button and reset its state
+        if (joinBtn) {
+            joinBtn.style.display = 'inline-flex';
+            joinBtn.disabled = false;
+            joinBtn.innerHTML = '<i class="fas fa-sign-in-alt"></i> <span>Join</span>';
+        }
+    } else if (now < start) {
+        // Joined but tournament not started - show Leave button and reset its state
+        if (leaveBtn) {
+            leaveBtn.style.display = 'inline-flex';
+            leaveBtn.disabled = false;
+            leaveBtn.innerHTML = '<i class="fas fa-sign-out-alt"></i> <span>Leave</span>';
+        }
+    } else {
+        // Joined and tournament is active - show Pause button
+        if (pauseBtn) pauseBtn.style.display = 'inline-flex';
+    }
+}
+
+function joinTournament(tournamentId) {
+    const joinBtn = document.getElementById('join-btn');
+    if (joinBtn) {
+        joinBtn.disabled = true;
+        joinBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Joining...';
+    }
+    
+    // Check if this is an admin-only tournament
+    const isAdminTournament = {{ 'true' if tournament.admin_only else 'false' }};
+    
+    if (typeof socket !== 'undefined' && socket && socket.emit) {
+        socket.emit('join_tournament', { tournament_id: tournamentId });
+        
+        // For admin tournaments, wait for server confirmation
+        // For regular tournaments, update UI immediately as before
+        if (!isAdminTournament) {
+            document.getElementById('tournament-actions').setAttribute('data-joined', 'true');
+            setTimeout(function() {
+                updateActionButtons();
+                updateLeaderboardData();
+            }, 300);
+        }
+        // Admin tournaments: UI will be updated by tournament_joined or tournament_join_error events
+    } else {
+        fetch('/api/join_tournament', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ tournament_id: tournamentId })
+        }).then(function(response) {
+            return response.json();
+        }).then(function(data) {
+            if (data.error) {
+                alert(data.error);
+                if (joinBtn) {
+                    joinBtn.disabled = false;
+                    joinBtn.innerHTML = '<i class="fas fa-sign-in-alt"></i> <span>Join</span>';
+                }
+            } else {
+                document.getElementById('tournament-actions').setAttribute('data-joined', 'true');
+                updateActionButtons();
+                updateLeaderboardData();
+            }
+        }).catch(function(error) {
+            console.error('Failed to join tournament:', error);
+            alert('Failed to join tournament. Please try again.');
+            if (joinBtn) {
+                joinBtn.disabled = false;
+                joinBtn.innerHTML = '<i class="fas fa-sign-in-alt"></i> <span>Join</span>';
+            }
+        });
+    }
+}
+
+function leaveTournament(tournamentId) {
+    const leaveBtn = document.getElementById('leave-btn');
+    if (leaveBtn) {
+        leaveBtn.disabled = true;
+        leaveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Leaving...';
+    }
+    
+    if (typeof socket !== 'undefined' && socket && socket.emit) {
+        socket.emit('leave_tournament', { tournament_id: tournamentId });
+        // Update data attribute immediately
+        document.getElementById('tournament-actions').setAttribute('data-joined', 'false');
+        // Update UI immediately after setting the attribute
+        setTimeout(function() {
+            updateActionButtons();
+            updateLeaderboardData();
+        }, 100);
+    } else {
+        fetch('/api/leave_tournament', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ tournament_id: tournamentId })
+        }).then(function() {
+            document.getElementById('tournament-actions').setAttribute('data-joined', 'false');
+            updateActionButtons();
+            updateLeaderboardData();
+        }).catch(function(error) {
+            console.error('Failed to leave tournament:', error);
+            alert('Failed to leave tournament. Please try again.');
+            if (leaveBtn) {
+                leaveBtn.disabled = false;
+                leaveBtn.innerHTML = '<i class="fas fa-sign-out-alt"></i> <span>Leave</span>';
+            }
+        });
+    }
+}
+
+function updateCountdowns() {
+    const now = getServerTime();
+    
+    // Update action buttons based on current time
+    updateActionButtons();
+    
+    // Update tournament timer - dynamically determines status based on current time
+    document.querySelectorAll('.tournament-timer').forEach(function(element) {
+        const startTime = element.getAttribute('data-start-time');
+        const endTime = element.getAttribute('data-end-time');
+        if (!startTime || !endTime) return;
+        
+        const start = new Date(startTime);
+        const end = new Date(endTime);
+        
+        if (now < start) {
+            // Tournament hasn't started yet
+            const diff = start - now;
+            const timeText = formatCountdown(diff);
+            element.textContent = 'Starting in: ' + timeText;
+            element.style.color = '#ffc107';
+        } else if (now >= start && now < end) {
+            // Tournament is active - show time remaining
+            const diff = end - now;
+            const timeText = formatCountdown(diff);
+            element.textContent = 'Time left: ' + timeText;
+            element.style.color = '#28a745';
+        } else {
+            // Tournament has finished
+            element.textContent = 'Tournament finished!';
+            element.style.color = '#dc3545';
+        }
+    });
+}
+
+// Format countdown based on time remaining
+function formatCountdown(diff) {
+    const weeks = Math.floor(diff / (1000 * 60 * 60 * 24 * 7));
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+    // More than 2 weeks - show in weeks
+    if (weeks >= 2) {
+        return weeks + ' week' + (weeks > 1 ? 's' : '');
+    }
+    // More than 1 day - show days, hours, minutes
+    else if (days > 1) {
+        return days + 'd ' + hours + 'h ' + minutes + 'm';
+    }
+    // More than 1 hour - show hours, minutes, seconds
+    else if (hours > 0) {
+        return hours + 'h ' + minutes + 'm ' + seconds + 's';
+    }
+    // More than 1 minute - show minutes and seconds
+    else if (minutes > 0) {
+        return minutes + 'm ' + seconds + 's';
+    }
+    // Less than 1 minute - show only seconds
+    else {
+        return seconds + 's';
+    }
+}
+
+// Auto-update leaderboard data without page refresh
+function updateLeaderboardData() {
+    // Add cache-busting timestamp to prevent stale data
+    var url = window.location.href;
+    var cacheBuster = '_t=' + Date.now();
+    url = url + (url.indexOf('?') >= 0 ? '&' : '?') + cacheBuster;
+    
+    fetch(url, {
+        cache: 'no-store',
+        headers: {
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache'
+        }
+    })
+        .then(response => response.text())
+        .then(html => {
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+            
+            // Update leaderboard content - use specific id selector
+            const newLeaderboard = doc.querySelector('#leaderboard-card');
+            const currentLeaderboard = document.querySelector('#leaderboard-card');
+            if (newLeaderboard && currentLeaderboard) {
+                // Store current scroll position
+                const scrollPos = window.scrollY;
+                currentLeaderboard.innerHTML = newLeaderboard.innerHTML;
+                // Restore scroll position
+                window.scrollTo(0, scrollPos);
+                // Re-setup hover listeners after DOM update
+                setupUsernameHoverListeners();
+            }
+            
+            // Update player count
+            const newPlayerCount = doc.querySelector('.card:first-child div[style*="font-size: 24px"]');
+            const currentPlayerCount = document.querySelector('.card:first-child div[style*="font-size: 24px"]');
+            if (newPlayerCount && currentPlayerCount) {
+                currentPlayerCount.textContent = newPlayerCount.textContent;
+            }
+            
+            // Update games count
+            const gameCards = document.querySelectorAll('.card');
+            const newGameCards = doc.querySelectorAll('.card');
+            if (gameCards.length >= 3 && newGameCards.length >= 3) {
+                const currentGameCount = gameCards[2].querySelector('div[style*="font-size: 24px"]');
+                const newGameCount = newGameCards[2].querySelector('div[style*="font-size: 24px"]');
+                if (currentGameCount && newGameCount) {
+                    currentGameCount.textContent = newGameCount.textContent;
+                }
+            }
+            
+            console.log('Leaderboard data updated');
+        })
+        .catch(error => {
+            console.log('Error updating leaderboard:', error);
+        });
+}
+
+// Update countdowns every second
+setInterval(updateCountdowns, 1000);
+
+// Auto-update leaderboard every 5 seconds (like Lichess)
+setInterval(updateLeaderboardData, 5000);
+
+// Initial call with delay to ensure DOM is ready
+setTimeout(updateCountdowns, 100);
+
+// Also call when page becomes visible
+document.addEventListener('visibilitychange', function() {
+    if (!document.hidden) {
+        updateCountdowns();
+        updateLeaderboardData();
+    }
+});
+
+// Initialize socket connection if not already done
+if (!window.socket) {
+    window.socket = io();
+}
+
+// Function to initialize tournament socket handlers
+function initTournamentSocket() {
+    console.log('Initializing tournament socket for:', currentTournamentId);
+    
+    // Ensure tournament_joined handler is set up (may be called multiple times on reconnect)
+    // Remove any existing handler first to prevent duplicates
+    window.socket.off('tournament_joined');
+    window.socket.on('tournament_joined', function(data) {
+        console.log('*** TOURNAMENT_JOINED EVENT RECEIVED ***', data);
+        // Update the UI immediately since server has confirmed join
+        isJoined = true;
+        var actionsDiv = document.getElementById('tournament-actions');
+        if (actionsDiv) {
+            actionsDiv.setAttribute('data-joined', 'true');
+        }
+        
+        // Reset join button state (important for admin tournaments that wait for confirmation)
+        var joinBtn = document.getElementById('join-btn');
+        if (joinBtn) {
+            joinBtn.disabled = false;
+            joinBtn.innerHTML = '<i class="fas fa-sign-in-alt"></i> <span>Join</span>';
+        }
+        
+        updateActionButtons();
+        
+        // Force multiple refreshes to ensure we get fresh data
+        updateLeaderboardData();
+        setTimeout(function() {
+            updateLeaderboardData();
+            console.log('Second leaderboard refresh after join');
+        }, 300);
+        setTimeout(function() {
+            updateLeaderboardData();
+            console.log('Third leaderboard refresh after join');
+        }, 800);
+    });
+    
+    // Also handle join errors for admin tournaments
+    window.socket.off('tournament_join_error');
+    window.socket.on('tournament_join_error', function(data) {
+        console.log('Tournament join error:', data.error);
+        // Reset the join button
+        var joinBtn = document.getElementById('join-btn');
+        if (joinBtn) {
+            joinBtn.disabled = false;
+            joinBtn.innerHTML = '<i class="fas fa-sign-in-alt"></i> <span>Join</span>';
+        }
+        alert(data.error || 'Failed to join tournament');
+    });
+    
+    // Check if player has an active game they need to rejoin
+    window.socket.emit('check_active_game');
+    
+    // Join the tournament room for featured game updates
+    window.socket.emit('join_tournament_room', { tournament_id: currentTournamentId });
+    console.log('Emitted join_tournament_room for:', currentTournamentId);
+    
+    // Track that user is on tournament page (for auto-pause feature)
+    window.socket.emit('join_tournament_page', { tournament_id: currentTournamentId });
+    console.log('Emitted join_tournament_page for:', currentTournamentId);
+    
+    // Request tournament featured game (slight delay to ensure room join completes)
+    setTimeout(function() {
+        requestTournamentFeaturedGame();
+        console.log('Requested tournament featured game');
+    }, 500);
+    
+    // Periodically refresh featured game every 10 seconds
+    if (window.featuredGameRefreshInterval) {
+        clearInterval(window.featuredGameRefreshInterval);
+    }
+    window.featuredGameRefreshInterval = setInterval(function() {
+        requestTournamentFeaturedGame();
+    }, 10000);
+    
+    var actionsDiv = document.getElementById('tournament-actions');
+    if (actionsDiv) {
+        var isJoined = actionsDiv.getAttribute('data-joined') === 'true';
+        var tournamentId = actionsDiv.getAttribute('data-tournament-id');
+        var startTime = new Date(actionsDiv.getAttribute('data-start-time'));
+        var endTime = new Date(actionsDiv.getAttribute('data-end-time'));
+        var now = getServerTime();
+        
+        // If joined and tournament is active, request pairing
+        if (isJoined && now >= startTime && now < endTime) {
+            console.log('Requesting tournament pairing...');
+            window.socket.emit('request_tournament_pairing', { tournament_id: tournamentId });
+        }
+    }
+}
+
+// Check for active game and redirect if found
+window.socket.on('active_game_found', function(data) {
+    console.log('Active game found - redirecting immediately');
+    if (data.room_id) {
+        window.location.href = '/play?room=' + data.room_id;
+    }
+});
+
+// Request pairing when socket connects
+window.socket.on('connect', function() {
+    console.log('Socket connected event fired on tournament page');
+    initTournamentSocket();
+    loadTournamentChat();
+});
+
+// CRITICAL: Also initialize immediately if socket is already connected
+// This handles race condition where base.html already connected the socket
+if (window.socket.connected) {
+    console.log('Socket already connected, initializing immediately');
+    initTournamentSocket();
+    loadTournamentChat();
+}
+
+// Tournament chat update listener
+window.socket.on('tournament_chat_update', function(data) {
+    console.log('*** CHAT UPDATE RECEIVED ***', data);
+    if (data.tournament_id === currentTournamentId && data.message) {
+        console.log('Adding message to chat:', data.message);
+        addTournamentChatMessage(data.message);
+    } else {
+        console.log('Chat update ignored - wrong tournament or no message');
+    }
+});
+
+
+// Handle tournament featured game updates
+window.socket.on('tournament_featured_game_update', function(data) {
+    console.log('Tournament featured game update:', data);
+    if (data.tournament_id === currentTournamentId) {
+        updateTournamentFeaturedGame(data);
+    }
+});
+
+// Handle pairing status updates
+window.socket.on('pairing_status', function(data) {
+    console.log('Pairing status:', data);
+    // Could show a "searching for opponent" message here
+});
+
+// Track current pause state
+var currentlyPaused = {{ 'true' if session.username in paused_users else 'false' }};
+
+// Function to update button appearance based on pause state
+function updatePauseButton(isPaused) {
+    const button = document.getElementById('pause-btn');
+    const icon = document.getElementById('pause-icon');
+    const text = document.getElementById('pause-text');
+    
+    if (button && icon && text) {
+        if (isPaused) {
+            icon.className = 'fas fa-play';
+            text.textContent = 'Continue';
+            button.style.background = '#28a745';
+            button.style.borderColor = '#28a745';
+            button.style.borderRadius = '50px';
+        } else {
+            icon.className = 'fas fa-pause';
+            text.textContent = 'Pause';
+            button.style.background = '#6c757d';
+            button.style.borderColor = '#6c757d';
+            button.style.borderRadius = '4px';
+        }
+    }
+}
+
+// Pause tournament function
+function pauseTournament(tournamentId) {
+    console.log('Pause tournament clicked:', tournamentId);
+    if (window.socket && window.socket.connected) {
+        window.socket.emit('pause_tournament', { tournament_id: tournamentId });
+    } else {
+        console.error('Socket not connected');
+        alert('Connection error. Please refresh the page.');
+    }
+}
+
+// Tournament game start - instant teleportation like Lichess
+window.socket.on('tournament_game_start', function(data) {
+    console.log('Tournament game starting:', data);
+    
+    // Immediately redirect to the new game room
+    if (data.room_id) {
+        window.location.href = '/play?room=' + data.room_id;
+    }
+});
+
+// Handle tournament ended (admin forced end or natural end)
+window.socket.on('tournament_ended', function(data) {
+    console.log('Tournament ended:', data);
+    if (data.tournament_id === currentTournamentId) {
+        showTournamentEndOverlay(data);
+    }
+});
+
+function showTournamentEndOverlay(data) {
+    // Create overlay
+    var overlay = document.createElement('div');
+    overlay.id = 'tournament-end-overlay';
+    overlay.innerHTML = `
+        <div class="end-overlay-content">
+            <div id="end-confetti-container"></div>
+            <h1 class="end-title">Tournament Finished!</h1>
+            <h2 class="end-tournament-name">${data.name}</h2>
+            
+            <div class="end-podium-container">
+                ${data.top_players && data.top_players.length >= 2 ? `
+                <div class="end-podium-place second">
+                    <div class="end-podium-player">
+                        <div class="end-medal silver"><i class="fas fa-medal"></i></div>
+                        <div class="end-rank">2nd</div>
+                        <div class="end-name" style="color: ${data.top_players[1].color}; ${data.top_players[1].admin_rank === 'dragon' ? 'text-shadow: 0 0 8px #FFD700, 0 0 12px #FFD700, 0 0 18px #FF8C00, 0 0 25px #FF8C00;' : (data.top_players[1].admin_rank === 'galaxy' ? 'text-shadow: 0 0 8px #9400D3, 0 0 15px #8A2BE2, 0 0 25px #4B0082, 0 0 35px #9400D3;' : '')}">${data.top_players[1].admin_rank === 'admin' ? '<i class="fas fa-crown" style="color: #1a1a1a; text-shadow: 0 0 2px #fff, 0 0 4px #fff, 0 0 10px rgba(0,0,0,0.95); font-size: 12px; margin-right: 5px;"></i>' : (data.top_players[1].admin_rank === 'dragon' ? '<i class="fas fa-dragon" style="color: #FFD700; text-shadow: 0 0 10px #FF8C00, 0 0 20px #FF4500; font-size: 12px; margin-right: 5px;"></i>' : (data.top_players[1].admin_rank === 'galaxy' ? '<span class="galaxy-black-hole galaxy-black-hole-sm" style="margin-right: 5px;"></span>' : ''))}${data.top_players[1].admin_rank === 'creator' ? '<span class="creator-cloud-aura creator-cloud-aura-sm">' + data.top_players[1].username + '</span>' : data.top_players[1].username}</div>
+                        <div class="end-rating">${data.top_players[1].rating || 1500}</div>
+                        <div class="end-stats">${data.top_players[1].score} pts | ${data.top_players[1].win_rate}% wins</div>
+                    </div>
+                    <div class="end-stand stand-2"></div>
+                </div>
+                ` : ''}
+                
+                ${data.top_players && data.top_players.length >= 1 ? `
+                <div class="end-podium-place first">
+                    <div class="end-podium-player">
+                        <div class="end-medal gold"><i class="fas fa-crown"></i></div>
+                        <div class="end-rank">1st</div>
+                        <div class="end-name" style="color: ${data.top_players[0].color}; ${data.top_players[0].admin_rank === 'dragon' ? 'text-shadow: 0 0 8px #FFD700, 0 0 12px #FFD700, 0 0 18px #FF8C00, 0 0 25px #FF8C00;' : (data.top_players[0].admin_rank === 'galaxy' ? 'text-shadow: 0 0 8px #9400D3, 0 0 15px #8A2BE2, 0 0 25px #4B0082, 0 0 35px #9400D3;' : '')}">${data.top_players[0].admin_rank === 'admin' ? '<i class="fas fa-crown" style="color: #1a1a1a; text-shadow: 0 0 2px #fff, 0 0 4px #fff, 0 0 10px rgba(0,0,0,0.95); font-size: 12px; margin-right: 5px;"></i>' : (data.top_players[0].admin_rank === 'dragon' ? '<i class="fas fa-dragon" style="color: #FFD700; text-shadow: 0 0 10px #FF8C00, 0 0 20px #FF4500; font-size: 12px; margin-right: 5px;"></i>' : (data.top_players[0].admin_rank === 'galaxy' ? '<span class="galaxy-black-hole galaxy-black-hole-sm" style="margin-right: 5px;"></span>' : ''))}${data.top_players[0].admin_rank === 'creator' ? '<span class="creator-cloud-aura creator-cloud-aura-sm">' + data.top_players[0].username + '</span>' : data.top_players[0].username}</div>
+                        <div class="end-rating">${data.top_players[0].rating || 1500}</div>
+                        <div class="end-stats">${data.top_players[0].score} pts | ${data.top_players[0].win_rate}% wins</div>
+                    </div>
+                    <div class="end-stand stand-1"></div>
+                </div>
+                ` : ''}
+                
+                ${data.top_players && data.top_players.length >= 3 ? `
+                <div class="end-podium-place third">
+                    <div class="end-podium-player">
+                        <div class="end-medal bronze"><i class="fas fa-medal"></i></div>
+                        <div class="end-rank">3rd</div>
+                        <div class="end-name" style="color: ${data.top_players[2].color}; ${data.top_players[2].admin_rank === 'dragon' ? 'text-shadow: 0 0 8px #FFD700, 0 0 12px #FFD700, 0 0 18px #FF8C00, 0 0 25px #FF8C00;' : (data.top_players[2].admin_rank === 'galaxy' ? 'text-shadow: 0 0 8px #9400D3, 0 0 15px #8A2BE2, 0 0 25px #4B0082, 0 0 35px #9400D3;' : '')}">${data.top_players[2].admin_rank === 'admin' ? '<i class="fas fa-crown" style="color: #1a1a1a; text-shadow: 0 0 2px #fff, 0 0 4px #fff, 0 0 10px rgba(0,0,0,0.95); font-size: 12px; margin-right: 5px;"></i>' : (data.top_players[2].admin_rank === 'dragon' ? '<i class="fas fa-dragon" style="color: #FFD700; text-shadow: 0 0 10px #FF8C00, 0 0 20px #FF4500; font-size: 12px; margin-right: 5px;"></i>' : (data.top_players[2].admin_rank === 'galaxy' ? '<span class="galaxy-black-hole galaxy-black-hole-sm" style="margin-right: 5px;"></span>' : ''))}${data.top_players[2].admin_rank === 'creator' ? '<span class="creator-cloud-aura creator-cloud-aura-sm">' + data.top_players[2].username + '</span>' : data.top_players[2].username}</div>
+                        <div class="end-rating">${data.top_players[2].rating || 1500}</div>
+                        <div class="end-stats">${data.top_players[2].score} pts | ${data.top_players[2].win_rate}% wins</div>
+                    </div>
+                    <div class="end-stand stand-3"></div>
+                </div>
+                ` : ''}
+            </div>
+            
+            <div class="end-buttons">
+                <a href="/tournament/${data.tournament_id}/results" class="btn end-btn">View Full Results</a>
+                <a href="/" class="btn end-btn secondary">Back to Lobby</a>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(overlay);
+    
+    // Trigger confetti
+    createEndConfetti();
+    
+    // Animate stands
+    setTimeout(function() {
+        var stands = document.querySelectorAll('.end-stand');
+        stands.forEach(function(stand) {
+            stand.classList.add('animate');
+        });
+    }, 100);
+}
+
+function createEndConfetti() {
+    var container = document.getElementById('end-confetti-container');
+    if (!container) return;
+    
+    var colors = ['#FFD700', '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD', '#98D8C8'];
+    
+    for (var i = 0; i < 150; i++) {
+        setTimeout(function() {
+            var confetti = document.createElement('div');
+            confetti.className = 'end-confetti';
+            confetti.style.left = Math.random() * 100 + '%';
+            confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+            confetti.style.animationDuration = (2 + Math.random() * 2) + 's';
+            confetti.style.animationDelay = Math.random() * 0.5 + 's';
+            confetti.style.width = (5 + Math.random() * 10) + 'px';
+            confetti.style.height = (5 + Math.random() * 10) + 'px';
+            if (Math.random() > 0.5) confetti.style.borderRadius = '50%';
+            container.appendChild(confetti);
+            
+            setTimeout(function() {
+                if (confetti.parentNode) confetti.parentNode.removeChild(confetti);
+            }, 4000);
+        }, i * 20);
+    }
+}
+
+// Handle pause status updates
+window.socket.on('pause_status', function(data) {
+    console.log('Received pause status:', data);
+    
+    // Update our local state
+    currentlyPaused = data.paused;
+    
+    // Update the button
+    updatePauseButton(data.paused);
+    
+    // Update pause icon in leaderboard next to current user's name
+    if (data.username) {
+        const leaderboardIcon = document.getElementById('leaderboard-pause-' + data.username);
+        if (leaderboardIcon) {
+            leaderboardIcon.style.display = data.paused ? 'inline' : 'none';
+        }
+    }
+    
+    // Show notification if there's a message
+    if (data.message) {
+        const notification = document.createElement('div');
+        notification.style.cssText = `
+            position: fixed; top: 70px; right: 20px; background: ${data.paused ? '#ffc107' : '#28a745'}; 
+            color: white; padding: 15px 20px; border-radius: 5px; z-index: 1001;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3); font-weight: bold;
+        `;
+        notification.textContent = data.message;
+        document.body.appendChild(notification);
+        
+        setTimeout(() => {
+            notification.style.opacity = '0';
+            notification.style.transition = 'opacity 0.3s';
+            setTimeout(() => notification.remove(), 300);
+        }, 3000);
+    }
+});
+
+// Handle other users' pause status updates
+window.socket.on('user_pause_status', function(data) {
+    console.log('Received user pause status:', data);
+    
+    // If this is the current user, update the button
+    var username = '{{ session.username }}';
+    if (data.username === username) {
+        currentlyPaused = data.paused;
+        updatePauseButton(data.paused);
+        console.log('Updated pause button for current user, paused:', data.paused);
+    }
+    
+    // Update pause icon in leaderboard next to player's name
+    const leaderboardIcon = document.getElementById('leaderboard-pause-' + data.username);
+    if (leaderboardIcon) {
+        leaderboardIcon.style.display = data.paused ? 'inline' : 'none';
+    }
+});
+
+// Restore button state after any DOM updates
+setInterval(function() {
+    updatePauseButton(currentlyPaused);
+}, 1000);
+
+// Handle real-time ELO updates
+window.socket.on('rating_update', function(data) {
+    console.log('Rating update received:', data);
+    
+    // Update ELO display for each player
+    if (data.players) {
+        for (var username in data.players) {
+            var eloElement = document.getElementById('elo-' + username);
+            if (eloElement) {
+                var playerData = data.players[username];
+                var oldRating = parseInt(eloElement.textContent);
+                var newRating = playerData.new_rating;
+                var change = playerData.change;
+                
+                // Flash the rating change
+                eloElement.textContent = newRating;
+                
+                // Show rating change animation
+                if (change !== 0) {
+                    var changeSpan = document.createElement('span');
+                    changeSpan.style.cssText = 'margin-left: 4px; font-size: 11px; font-weight: bold;';
+                    changeSpan.style.color = change > 0 ? '#28a745' : '#dc3545';
+                    changeSpan.textContent = (change > 0 ? '+' : '') + change;
+                    eloElement.appendChild(changeSpan);
+                    
+                    // Fade out the change indicator after 3 seconds
+                    setTimeout(function() {
+                        changeSpan.style.transition = 'opacity 0.5s';
+                        changeSpan.style.opacity = '0';
+                        setTimeout(function() {
+                            if (changeSpan.parentNode) {
+                                changeSpan.remove();
+                            }
+                        }, 500);
+                    }, 3000);
+                }
+            }
+        }
+    }
+});
+
+// Handle tournament leaderboard updates
+window.socket.on('tournament_leaderboard_update', function(data) {
+    console.log('Tournament leaderboard update:', data);
+    if (data.tournament_id === currentTournamentId) {
+        // Refresh the leaderboard data
+        updateLeaderboardData();
+    }
+});
+
+// tournament_joined handler is now in initTournamentSocket() for proper reconnection support
+
+// tournament_join_error handler is now in initTournamentSocket() for proper reconnection support
+
+// Handle when ANY player joins the tournament (broadcast to all)
+window.socket.on('tournament_player_joined', function(data) {
+    console.log('Player joined tournament:', data.username, 'Total players:', data.player_count);
+    // Refresh leaderboard immediately to show the new player
+    updateLeaderboardData();
+});
+
+// Player Games Popup Functions (Lichess-style)
+function showPlayerGames(username, rank, event) {
+    // Prevent showing popup if clicking directly on the username link
+    if (event.target.tagName === 'A') {
+        return;
+    }
+    
+    var overlay = document.getElementById('player-games-overlay');
+    var panel = document.getElementById('player-games-panel');
+    var playerRank = document.getElementById('popup-player-rank');
+    var playerName = document.getElementById('popup-player-name');
+    var playerScore = document.getElementById('popup-player-score');
+    var gamesList = document.getElementById('popup-games-list');
+    
+    // Show overlay and animate panel
+    overlay.style.display = 'block';
+    playerRank.textContent = '#' + rank;
+    playerName.textContent = username;
+    playerScore.innerHTML = '<span style="color: #888;">Loading...</span>';
+    gamesList.innerHTML = '<div style="text-align: center; padding: 20px; color: #888;">Loading games...</div>';
+    
+    // Animate panel in
+    setTimeout(function() {
+        panel.style.transform = 'translateX(0)';
+    }, 10);
+    
+    // Fetch player's tournament games
+    fetch('/api/player/' + encodeURIComponent(username) + '/tournament/' + currentTournamentId + '/stats')
+        .then(function(response) { return response.json(); })
+        .then(function(data) {
+            // Update player name with color and ELO rating
+            playerName.style.color = data.color || '#c9c9c9';
+            playerName.textContent = username + ' (' + (data.rating || 1500) + ')';
+            
+            // Show player title if available
+            var popupTitle = document.getElementById('popup-player-title');
+            if (popupTitle) {
+                if (data.title && data.title[0]) {
+                    popupTitle.textContent = data.title[0];
+                    popupTitle.style.background = data.title[1] || '#666';
+                    popupTitle.style.display = 'inline-block';
+                } else {
+                    popupTitle.style.display = 'none';
+                }
+            }
+            
+            // Show admin crown, dragon, galaxy, or creator cloud
+            var popupCrown = document.getElementById('popup-player-crown');
+            var popupDragon = document.getElementById('popup-player-dragon');
+            var popupGalaxy = document.getElementById('popup-player-galaxy');
+            var popupCreator = document.getElementById('popup-player-creator');
+            var popupCreatorCloud = document.getElementById('popup-player-creator-cloud');
+            if (popupCrown) {
+                popupCrown.style.display = data.admin_rank === 'admin' ? 'inline' : 'none';
+            }
+            if (popupDragon) {
+                popupDragon.style.display = data.admin_rank === 'dragon' ? 'inline' : 'none';
+            }
+            if (popupGalaxy) {
+                popupGalaxy.style.display = data.admin_rank === 'galaxy' ? 'inline' : 'none';
+            }
+            if (popupCreator) {
+                popupCreator.style.display = data.admin_rank === 'creator' ? 'inline' : 'none';
+                if (popupCreatorCloud && data.admin_rank === 'creator') {
+                    // Show username only in creator cloud (no ELO)
+                    popupCreatorCloud.textContent = data.username;
+                }
+            }
+            // Hide regular name if creator (name is in cloud with ELO)
+            if (data.admin_rank === 'creator') {
+                playerName.style.display = 'none';
+            } else {
+                playerName.style.display = '';
+            }
+            // Apply dragon/galaxy name glow
+            if (data.admin_rank === 'dragon') {
+                playerName.style.textShadow = '0 0 8px #FFD700, 0 0 12px #FFD700, 0 0 18px #FF8C00, 0 0 25px #FF8C00';
+            } else if (data.admin_rank === 'galaxy') {
+                playerName.style.textShadow = '0 0 8px #9400D3, 0 0 15px #8A2BE2, 0 0 25px #4B0082, 0 0 35px #9400D3';
+            } else {
+                playerName.style.textShadow = '';
+            }
+            
+            // Show ranking badges [B1], [R1], etc.
+            var popupBadges = document.getElementById('popup-player-badges');
+            if (popupBadges && data.ranking_badges && data.ranking_badges.length > 0) {
+                var badgesHtml = '';
+                data.ranking_badges.forEach(function(badge) {
+                    var color = badge.startsWith('B') ? '#f39c12' : '#3498db';
+                    badgesHtml += '<span style="background: ' + color + '; color: #000; padding: 1px 4px; border-radius: 3px; margin-right: 3px;">[' + badge + ']</span>';
+                });
+                popupBadges.innerHTML = badgesHtml;
+                popupBadges.style.display = 'inline';
+            } else if (popupBadges) {
+                popupBadges.style.display = 'none';
+            }
+            
+            // Calculate win rate and chess-style score (Win=1, Draw=½)
+            var wins = (data.wins || []).length;
+            var losses = (data.losses || []).length;
+            var draws = (data.draws || []).length;
+            var totalGames = data.games_played || (wins + losses + draws);
+            var winRate = totalGames > 0 ? Math.round((wins / totalGames) * 100) : 0;
+            
+            // Chess-style score: wins + draws*0.5
+            var chessScore = wins + (draws * 0.5);
+            var chessScoreDisplay;
+            if (draws % 2 === 1) {
+                // Has half point - show as X½
+                chessScoreDisplay = Math.floor(chessScore) + '½';
+            } else {
+                // Whole number
+                chessScoreDisplay = chessScore.toString();
+            }
+            
+            // Display chess-style score/games, win rate, and berserk rate
+            var berserkRateHtml = (data.berserk_count > 0) ? 
+                '<span style="color: #f39c12; margin-left: 8px;"><i class="fas fa-bolt"></i> ' + data.berserk_rate + '%</span>' : '';
+            playerScore.innerHTML = '<span style="color: #f0d060; font-weight: bold;">' + chessScoreDisplay + '/' + totalGames + '</span>' +
+                '<span style="color: ' + (winRate >= 50 ? '#4caf50' : '#f44336') + ';">' + winRate + '% wins</span>' + berserkRateHtml;
+            
+            var html = '';
+            
+            // Combine all games into one list with type
+            var allGames = [];
+            
+            // Add wins
+            (data.wins || []).forEach(function(game, index) {
+                allGames.push({
+                    type: 'win',
+                    opponent: game.opponent,
+                    opponent_rating: game.opponent_rating,
+                    opponent_color: game.opponent_color,
+                    color: game.color,
+                    game_id: game.game_id,
+                    date: game.date,
+                    berserk: game.berserk || false,
+                    order: new Date(game.date).getTime()
+                });
+            });
+            
+            // Add losses
+            (data.losses || []).forEach(function(game, index) {
+                allGames.push({
+                    type: 'loss',
+                    opponent: game.opponent,
+                    opponent_rating: game.opponent_rating,
+                    opponent_color: game.opponent_color,
+                    color: game.color,
+                    game_id: game.game_id,
+                    date: game.date,
+                    berserk: game.berserk || false,
+                    order: new Date(game.date).getTime()
+                });
+            });
+            
+            // Add draws
+            (data.draws || []).forEach(function(game, index) {
+                allGames.push({
+                    type: 'draw',
+                    opponent: game.opponent,
+                    opponent_rating: game.opponent_rating,
+                    opponent_color: game.opponent_color,
+                    color: game.color,
+                    game_id: game.game_id,
+                    date: game.date,
+                    berserk: game.berserk || false,
+                    order: new Date(game.date).getTime()
+                });
+            });
+            
+            // Sort by date (oldest first)
+            allGames.sort(function(a, b) { return a.order - b.order; });
+            
+            // Add current live game as the last entry (if exists)
+            if (data.current_game) {
+                var cg = data.current_game;
+                allGames.push({
+                    type: 'live',
+                    opponent: cg.opponent,
+                    opponent_rating: cg.opponent_rating,
+                    opponent_color: cg.opponent_color,
+                    color: cg.color,
+                    game_id: cg.game_id,
+                    order: Date.now() // Current time to ensure it's last
+                });
+            }
+            
+            // Generate HTML for games list
+            if (allGames.length === 0) {
+                gamesList.innerHTML = '<div style="text-align: center; padding: 20px; color: #888;">No games played yet</div>';
+            } else {
+                allGames.forEach(function(game, index) {
+                    // Determine result display
+                    var resultText, resultColor, isLive = false, gameTypeClass = '';
+                    if (game.type === 'win') {
+                        resultText = '1';
+                        resultColor = '#4caf50';
+                        gameTypeClass = 'win-game';
+                    } else if (game.type === 'loss') {
+                        resultText = '0';
+                        resultColor = '#f44336';
+                        gameTypeClass = 'loss-game';
+                    } else if (game.type === 'live') {
+                        resultText = '*';
+                        resultColor = '#f0d060';
+                        isLive = true;
+                        gameTypeClass = 'live-game';
+                    } else {
+                        resultText = '\u00BD';  // Half symbol
+                        resultColor = '#e0e0e0';
+                        gameTypeClass = 'draw-game';
+                    }
+                    
+                    // Color circle for piece color
+                    var colorCircle = game.color === 'white' 
+                        ? '<span style="display: inline-block; width: 14px; height: 14px; border-radius: 50%; background: #fff; border: 1px solid #666; margin-right: 8px;"></span>'
+                        : '<span style="display: inline-block; width: 14px; height: 14px; border-radius: 50%; background: #333; border: 1px solid #666; margin-right: 8px;"></span>';
+                    
+                    // Game link - live games go to spectate, finished games go to analysis
+                    var gameLink = '', hasLink = false;
+                    if (isLive && game.game_id) {
+                        gameLink = ' onclick="window.location.href=\'/play/' + game.game_id + '?spectate=true\'"';
+                        hasLink = true;
+                    } else if (game.game_id) {
+                        gameLink = ' onclick="window.location.href=\'/analysis/' + game.game_id + '?tournament_id=' + currentTournamentId + '\'"';
+                        hasLink = true;
+                    }
+                    
+                    // Build class list
+                    var rowClasses = 'popup-game-row ' + gameTypeClass;
+                    if (hasLink) rowClasses += ' clickable';
+                    
+                    // Berserk icon if player berserked in this game
+                    var berserkIcon = game.berserk ? '<span style="color: #f39c12; margin-right: 4px; font-size: 11px;"><i class="fas fa-bolt"></i></span>' : '';
+                    
+                    html += '<div class="' + rowClasses + '"' + gameLink + '>';
+                    html += '<span style="color: #888; min-width: 25px; font-size: 12px;">' + (index + 1) + '</span>';
+                    html += berserkIcon;
+                    html += colorCircle;
+                    html += '<span style="flex: 1;">';
+                    html += '<span style="color: ' + (game.opponent_color || '#ccc') + ';">' + game.opponent + '</span>';
+                    html += '<span style="color: #888; font-size: 11px; margin-left: 4px;">(' + (game.opponent_rating || '?') + ')</span>';
+                    html += '</span>';
+                    html += '<span style="font-weight: bold; font-size: 16px; color: ' + resultColor + '; min-width: 25px; text-align: right;">' + resultText + '</span>';
+                    html += '</div>';
+                });
+                gamesList.innerHTML = html;
+            }
+        })
+        .catch(function(error) {
+            console.error('Error fetching player games:', error);
+            gamesList.innerHTML = '<div style="text-align: center; padding: 20px; color: #f44336;">Error loading games</div>';
+        });
+}
+
+function closePlayerGamesPopup() {
+    var overlay = document.getElementById('player-games-overlay');
+    var panel = document.getElementById('player-games-panel');
+    
+    // Animate panel out
+    panel.style.transform = 'translateX(-100%)';
+    
+    // Hide overlay after animation
+    setTimeout(function() {
+        overlay.style.display = 'none';
+    }, 300);
+}
+
+// Close popup with Escape key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closePlayerGamesPopup();
+    }
+});
+
+// Player hover card system (Lichess-style)
+var hoverCardTimeout = null;
+var activeHoverUsername = null;
+var hoverCardData = {};
+var isHoveringCard = false;
+
+// Mill board positions for 120x120 mini board in hover card
+var hoverMiniPositions = [
+    {x: 8, y: 8}, {x: 60, y: 8}, {x: 112, y: 8},
+    {x: 26, y: 26}, {x: 60, y: 26}, {x: 94, y: 26},
+    {x: 43, y: 43}, {x: 60, y: 43}, {x: 77, y: 43},
+    {x: 8, y: 60}, {x: 26, y: 60}, {x: 43, y: 60},
+    {x: 77, y: 60}, {x: 94, y: 60}, {x: 112, y: 60},
+    {x: 43, y: 77}, {x: 60, y: 77}, {x: 77, y: 77},
+    {x: 26, y: 94}, {x: 60, y: 94}, {x: 94, y: 94},
+    {x: 8, y: 112}, {x: 60, y: 112}, {x: 112, y: 112}
+];
+
+function drawHoverMiniBoard(board, containerId) {
+    var container = document.getElementById(containerId);
+    if (!container) return;
+    container.innerHTML = '';
+    
+    // Draw board lines (SVG)
+    var svg = '<svg width="120" height="120" style="position: absolute; left: 0; top: 0;">';
+    svg += '<rect x="8" y="8" width="104" height="104" fill="none" stroke="#555" stroke-width="1.2"/>';
+    svg += '<rect x="26" y="26" width="68" height="68" fill="none" stroke="#555" stroke-width="1.2"/>';
+    svg += '<rect x="43" y="43" width="34" height="34" fill="none" stroke="#555" stroke-width="1.2"/>';
+    svg += '<line x1="60" y1="8" x2="60" y2="43" stroke="#555" stroke-width="1.2"/>';
+    svg += '<line x1="60" y1="77" x2="60" y2="112" stroke="#555" stroke-width="1.2"/>';
+    svg += '<line x1="8" y1="60" x2="43" y2="60" stroke="#555" stroke-width="1.2"/>';
+    svg += '<line x1="77" y1="60" x2="112" y2="60" stroke="#555" stroke-width="1.2"/>';
+    svg += '</svg>';
+    container.innerHTML = svg;
+    
+    // Draw pieces
+    if (board && board.length === 24) {
+        for (var i = 0; i < 24; i++) {
+            if (board[i] !== 0) {
+                var pos = hoverMiniPositions[i];
+                var piece = document.createElement('div');
+                piece.style.cssText = 'position: absolute; width: 10px; height: 10px; border-radius: 50%; transform: translate(-50%, -50%);';
+                piece.style.left = pos.x + 'px';
+                piece.style.top = pos.y + 'px';
+                piece.style.background = board[i] === 1 ? '#fff' : '#333';
+                piece.style.border = '1px solid #666';
+                piece.style.boxShadow = '0 1px 2px rgba(0,0,0,0.3)';
+                container.appendChild(piece);
+            }
+        }
+    }
+}
+
+function showHoverCard(username, element) {
+    // Don't show on mobile
+    if (window.innerWidth < 768) return;
+    
+    console.log('Showing hover card for:', username);
+    activeHoverUsername = username;
+    
+    // Fetch player data using the hover API
+    if (!hoverCardData[username] || Date.now() - hoverCardData[username].timestamp > 10000) {
+        console.log('Fetching hover data for:', username);
+        fetch('/api/player/' + encodeURIComponent(username) + '/hover')
+            .then(function(response) { 
+                console.log('Hover API response status:', response.status);
+                return response.json(); 
+            })
+            .then(function(data) {
+                console.log('Hover data received:', data);
+                hoverCardData[username] = { data: data, timestamp: Date.now() };
+                if (activeHoverUsername === username) {
+                    displayHoverCard(data, element);
+                }
+            })
+            .catch(function(err) {
+                console.error('Error fetching hover data:', err);
+            });
+    } else {
+        console.log('Using cached hover data for:', username);
+        displayHoverCard(hoverCardData[username].data, element);
+    }
+}
+
+function displayHoverCard(data, element) {
+    var card = document.getElementById('player-hover-card');
+    var titleBadge = document.getElementById('hover-card-title');
+    var nameLink = document.getElementById('hover-card-name');
+    var bulletRating = document.getElementById('hover-card-bullet');
+    var blitzRating = document.getElementById('hover-card-blitz');
+    var gameSection = document.getElementById('hover-card-game');
+    var gamePlayers = document.getElementById('hover-game-players');
+    var onlineIndicator = document.getElementById('hover-card-online');
+    
+    // Set online status from cache
+    var isOnline = onlineUsersCache.has(data.username);
+    if (onlineIndicator) {
+        onlineIndicator.className = 'online-indicator ' + (isOnline ? 'online' : 'offline');
+    }
+    
+    // Set player info
+    if (data.title) {
+        titleBadge.textContent = data.title;
+        titleBadge.style.display = 'inline-block';
+        titleBadge.style.background = data.title_color || '#666';
+    } else {
+        titleBadge.style.display = 'none';
+    }
+    
+    nameLink.textContent = data.username;
+    nameLink.style.color = data.color || '#c9c9c9';
+    nameLink.href = '/profile/' + encodeURIComponent(data.username);
+    
+    bulletRating.textContent = data.bullet_rating || '-';
+    blitzRating.textContent = data.blitz_rating || '-';
+    
+    // Handle live game
+    if (data.current_game) {
+        var cg = data.current_game;
+        gameSection.style.display = 'block';
+        
+        var whitePlayer = '<span style="color:' + (cg.white_color || '#ccc') + '">' + cg.white + '</span>';
+        var blackPlayer = '<span style="color:' + (cg.black_color || '#ccc') + '">' + cg.black + '</span>';
+        gamePlayers.innerHTML = whitePlayer + ' vs ' + blackPlayer;
+        
+        drawHoverMiniBoard(cg.board, 'hover-game-board');
+        
+        // Make game section clickable
+        gameSection.onclick = function(e) {
+            e.stopPropagation();
+            window.location.href = '/play/' + cg.game_id + '?spectate=true';
+        };
+    } else {
+        gameSection.style.display = 'none';
+    }
+    
+    // Position the card near the element
+    var rect = element.getBoundingClientRect();
+    var cardWidth = 220;
+    var cardHeight = data.current_game ? 280 : 120;
+    
+    var left = rect.right + 10;
+    var top = rect.top - 10;
+    
+    // Keep within viewport
+    if (left + cardWidth > window.innerWidth - 10) {
+        left = rect.left - cardWidth - 10;
+    }
+    if (top + cardHeight > window.innerHeight - 10) {
+        top = window.innerHeight - cardHeight - 10;
+    }
+    if (top < 10) top = 10;
+    
+    card.style.left = left + 'px';
+    card.style.top = top + 'px';
+    card.classList.add('visible');
+}
+
+function hideHoverCard() {
+    if (isHoveringCard) return;
+    var card = document.getElementById('player-hover-card');
+    card.classList.remove('visible');
+    activeHoverUsername = null;
+}
+
+// Add hover listeners to player usernames
+document.addEventListener('DOMContentLoaded', function() {
+    setupUsernameHoverListeners();
+    
+    // Also add listeners to the hover card itself
+    var card = document.getElementById('player-hover-card');
+    card.addEventListener('mouseenter', function() {
+        isHoveringCard = true;
+        clearTimeout(hoverCardTimeout);
+    });
+    card.addEventListener('mouseleave', function() {
+        isHoveringCard = false;
+        hoverCardTimeout = setTimeout(function() {
+            hideHoverCard();
+        }, 100);
+    });
+});
+
+function setupUsernameHoverListeners() {
+    var usernameLinks = document.querySelectorAll('.player-username-link');
+    console.log('Setting up hover listeners for', usernameLinks.length, 'player links');
+    
+    usernameLinks.forEach(function(link) {
+        if (link.dataset.hoverListenerAdded) return;
+        link.dataset.hoverListenerAdded = 'true';
+        
+        var username = link.getAttribute('data-username') || link.textContent.trim();
+        console.log('Adding hover listener for:', username);
+        
+        link.addEventListener('mouseenter', function(e) {
+            console.log('Mouse entered:', username);
+            clearTimeout(hoverCardTimeout);
+            hoverCardTimeout = setTimeout(function() {
+                showHoverCard(username, link);
+            }, 1000);
+        });
+        
+        link.addEventListener('mouseleave', function(e) {
+            console.log('Mouse left:', username);
+            clearTimeout(hoverCardTimeout);
+            hoverCardTimeout = setTimeout(function() {
+                hideHoverCard();
+            }, 200);
+        });
+    });
+}
+
+// Track online users for hover card display
+var onlineUsersCache = new Set();
+
+// Fetch initial online users list
+fetch('/api/online_users')
+    .then(function(response) { return response.json(); })
+    .then(function(users) {
+        users.forEach(function(u) { onlineUsersCache.add(u); });
+        console.log('Loaded online users:', onlineUsersCache.size);
+    })
+    .catch(function(err) { console.log('Error fetching online users:', err); });
+
+// Listen for online status updates
+window.socket.on('user_online_status', function(data) {
+    if (data.online) {
+        onlineUsersCache.add(data.username);
+    } else {
+        onlineUsersCache.delete(data.username);
+    }
+    // Update hover card if showing this user
+    var nameLink = document.getElementById('hover-card-name');
+    if (nameLink && nameLink.textContent === data.username) {
+        var onlineIndicator = document.getElementById('hover-card-online');
+        if (onlineIndicator) {
+            onlineIndicator.className = 'online-indicator ' + (data.online ? 'online' : 'offline');
+        }
+    }
+});
+
+// Notify server when leaving tournament page
+window.addEventListener('beforeunload', function() {
+    if (window.socket && window.socket.connected) {
+        window.socket.emit('leave_tournament_page', { tournament_id: currentTournamentId });
+    }
+});
+
+// Also handle visibility changes
+document.addEventListener('visibilitychange', function() {
+    if (document.hidden) {
+        if (window.socket && window.socket.connected) {
+            window.socket.emit('leave_tournament_page', { tournament_id: currentTournamentId });
+        }
+    } else {
+        if (window.socket && window.socket.connected) {
+            window.socket.emit('join_tournament_page', { tournament_id: currentTournamentId });
+        }
+    }
+});
+
+{% if tournament.status == 'finished' %}
+// Confetti celebration for finished tournament
+function createConfetti() {
+    const container = document.getElementById('confetti-container');
+    if (!container) return;
+    
+    const colors = ['#FFD700', '#FFA500', '#FF6347', '#00CED1', '#7B68EE', '#32CD32'];
+    
+    for (let i = 0; i < 100; i++) {
+        setTimeout(() => {
+            const confetti = document.createElement('div');
+            confetti.className = 'confetti';
+            confetti.style.cssText = `
+                position: fixed;
+                width: ${Math.random() * 10 + 5}px;
+                height: ${Math.random() * 10 + 5}px;
+                background: ${colors[Math.floor(Math.random() * colors.length)]};
+                left: ${Math.random() * 100}vw;
+                top: -20px;
+                opacity: ${Math.random() * 0.5 + 0.5};
+                transform: rotate(${Math.random() * 360}deg);
+                animation: confetti-fall ${Math.random() * 2 + 2}s linear forwards;
+                z-index: 9999;
+                pointer-events: none;
+            `;
+            container.appendChild(confetti);
+            
+            setTimeout(() => confetti.remove(), 4000);
+        }, i * 30);
+    }
+}
+
+// Add confetti animation keyframes
+const confettiStyle = document.createElement('style');
+confettiStyle.textContent = `
+    @keyframes confetti-fall {
+        to {
+            top: 100vh;
+            opacity: 0;
+            transform: rotate(${Math.random() * 720}deg);
+        }
+    }
+`;
+document.head.appendChild(confettiStyle);
+
+// Run confetti on page load
+createConfetti();
+{% endif %}
+</script>
+
+{% endblock %}

@@ -1,0 +1,360 @@
+{% extends "base.html" %}
+
+{% block title %}{{ username }} - All Games{% endblock %}
+
+{% block content %}
+<div style="max-width: 1200px; margin: 0 auto;">
+    <div class="card">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h2 style="margin: 0; display: flex; align-items: center; gap: 8px;">
+                {% if user.admin_rank == 'admin' %}
+                <i class="fas fa-crown" style="color: #1a1a1a; text-shadow: 0 0 2px #fff, 0 0 4px #fff, 0 0 15px rgba(0,0,0,0.95); font-size: 16px;"></i>
+                <span style="color: {{ user.color }};">{{ username }}</span>
+                {% elif user.admin_rank == 'dragon' %}
+                <i class="fas fa-dragon" style="color: #FFD700; text-shadow: 0 0 8px #FFD700, 0 0 15px #FF8C00; font-size: 16px;"></i>
+                <span style="color: {{ user.color }}; text-shadow: 0 0 6px rgba(255,215,0,0.8), 0 0 12px rgba(255,215,0,0.6);">{{ username }}</span>
+                {% elif user.admin_rank == 'galaxy' %}
+                <span class="galaxy-black-hole galaxy-black-hole-sm" style="margin-right: 4px;"></span>
+                <span style="color: {{ user.color }}; text-shadow: 0 0 8px #9400D3, 0 0 15px #8A2BE2, 0 0 25px #4B0082;">{{ username }}</span>
+                {% elif user.admin_rank == 'creator' %}
+                <span class="creator-cloud-aura creator-cloud-aura-sm">{{ username }}</span>
+                {% else %}
+                <i class="fas fa-circle"></i>
+                <span style="color: {{ user.color }};">{{ username }}</span>
+                {% endif %}
+                <span style="color: #c9c9c9;">- All Games</span>
+            </h2>
+            <a href="/profile/{{ username }}" style="color: #3893e8; text-decoration: none;">
+                <i class="fas fa-user"></i> Back to Profile
+            </a>
+        </div>
+
+        <!-- Search and Filter Section -->
+        <div style="background: #1a1a1a; padding: 20px; border-radius: 5px; margin-bottom: 20px;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                <div>
+                    <label style="display: block; margin-bottom: 5px; font-weight: bold;">Search Opponent:</label>
+                    <input type="text" id="opponent-search" placeholder="Enter opponent username..." 
+                           style="width: 100%; padding: 8px; background: #161512; border: 1px solid #3c3c3c; color: #c9c9c9; border-radius: 3px;">
+                </div>
+                <div>
+                    <label style="display: block; margin-bottom: 5px; font-weight: bold;">Time Control:</label>
+                    <select id="time-control-filter" style="width: 100%; padding: 8px; background: #161512; border: 1px solid #3c3c3c; color: #c9c9c9; border-radius: 3px;">
+                        <option value="">All</option>
+                        <option value="1+0">Bullet (1+0)</option>
+                        <option value="3+2">Blitz (3+2)</option>
+                        <option value="5+3">Rapid (5+3)</option>
+                    </select>
+                </div>
+                <div>
+                    <label style="display: block; margin-bottom: 5px; font-weight: bold;">Result:</label>
+                    <select id="result-filter" style="width: 100%; padding: 8px; background: #161512; border: 1px solid #3c3c3c; color: #c9c9c9; border-radius: 3px;">
+                        <option value="">All</option>
+                        <option value="win">Wins</option>
+                        <option value="loss">Losses</option>
+                        <option value="draw">Draws</option>
+                    </select>
+                </div>
+            </div>
+            <div style="display: flex; gap: 10px;">
+                <button onclick="searchGames()" style="background: #3893e8; color: white; border: none; padding: 10px 20px; border-radius: 3px; cursor: pointer;">
+                    <i class="fas fa-search"></i> Search
+                </button>
+                <button onclick="clearFilters()" style="background: #6c757d; color: white; border: none; padding: 10px 20px; border-radius: 3px; cursor: pointer;">
+                    <i class="fas fa-times"></i> Clear
+                </button>
+            </div>
+        </div>
+
+        <!-- Games Statistics -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-bottom: 20px;">
+            <div style="background: #1a1a1a; padding: 15px; border-radius: 5px; text-align: center;">
+                <div style="font-size: 24px; font-weight: bold; color: #3893e8;" id="total-games">-</div>
+                <div>Total Games</div>
+            </div>
+            <div style="background: #1a1a1a; padding: 15px; border-radius: 5px; text-align: center;">
+                <div style="font-size: 24px; font-weight: bold; color: #28a745;" id="total-wins">-</div>
+                <div>Wins</div>
+            </div>
+            <div style="background: #1a1a1a; padding: 15px; border-radius: 5px; text-align: center;">
+                <div style="font-size: 24px; font-weight: bold; color: #dc3545;" id="total-losses">-</div>
+                <div>Losses</div>
+            </div>
+            <div style="background: #1a1a1a; padding: 15px; border-radius: 5px; text-align: center;">
+                <div style="font-size: 24px; font-weight: bold; color: #ffc107;" id="total-draws">-</div>
+                <div>Draws</div>
+            </div>
+            <div style="background: #1a1a1a; padding: 15px; border-radius: 5px; text-align: center;">
+                <div style="font-size: 24px; font-weight: bold; color: #f0d060;" id="win-rate">-</div>
+                <div>Win Rate</div>
+            </div>
+        </div>
+
+        <!-- Games List -->
+        <div id="games-container">
+            <div style="text-align: center; padding: 20px;">
+                <i class="fas fa-spinner fa-spin"></i> Loading games...
+            </div>
+        </div>
+
+        <!-- Pagination -->
+        <div id="pagination" style="text-align: center; margin-top: 20px; display: none;">
+            <button id="prev-btn" onclick="changePage(-1)" style="background: #3893e8; color: white; border: none; padding: 8px 16px; border-radius: 3px; cursor: pointer; margin: 0 5px;">
+                <i class="fas fa-chevron-left"></i> Previous
+            </button>
+            <span id="page-info" style="margin: 0 15px; font-weight: bold;"></span>
+            <button id="next-btn" onclick="changePage(1)" style="background: #3893e8; color: white; border: none; padding: 8px 16px; border-radius: 3px; cursor: pointer; margin: 0 5px;">
+                Next <i class="fas fa-chevron-right"></i>
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+let allGames = [];
+let filteredGames = [];
+let currentPage = 1;
+const gamesPerPage = 20;
+
+// Load all games on page load
+document.addEventListener('DOMContentLoaded', function() {
+    loadAllGames();
+});
+
+function loadAllGames() {
+    fetch(`/api/user/${encodeURIComponent('{{ username }}')}/all-games`)
+        .then(response => response.json())
+        .then(games => {
+            allGames = games;
+            filteredGames = games;
+            updateStatistics();
+            displayGames();
+        })
+        .catch(error => {
+            console.error('Error loading games:', error);
+            document.getElementById('games-container').innerHTML = 
+                '<div style="text-align: center; opacity: 0.6; padding: 20px;">Error loading games</div>';
+        });
+}
+
+function updateStatistics() {
+    const username = '{{ username }}';
+    let wins = 0, losses = 0, draws = 0;
+
+    filteredGames.forEach(game => {
+        const result = getGameResult(game, username);
+        if (result === 'win') wins++;
+        else if (result === 'loss') losses++;
+        else if (result === 'draw') draws++;
+    });
+
+    const total = filteredGames.length;
+    const winRate = total > 0 ? ((wins / total) * 100).toFixed(1) + '%' : '0%';
+
+    document.getElementById('total-games').textContent = total;
+    document.getElementById('total-wins').textContent = wins;
+    document.getElementById('total-losses').textContent = losses;
+    document.getElementById('total-draws').textContent = draws;
+    document.getElementById('win-rate').textContent = winRate;
+}
+
+function getGameResult(game, username) {
+    // Check if it's the player's color first
+    const isWhite = game.white === username;
+    const isBlack = game.black === username;
+    
+    // Check winner field - this is the most reliable indicator
+    if (game.winner === 'draw') return 'draw';
+    
+    // Determine win/loss based on winner and player color
+    if (game.winner === 'white' && isWhite) return 'win';
+    if (game.winner === 'black' && isBlack) return 'win';
+    if (game.winner === 'white' && isBlack) return 'loss';
+    if (game.winner === 'black' && isWhite) return 'loss';
+    
+    // Fallback to rating change only if winner is not properly set
+    const ratingChange = game.user_rating_change;
+    if (ratingChange !== undefined && ratingChange !== null) {
+        if (ratingChange > 0) return 'win';
+        if (ratingChange < 0) return 'loss';
+        if (ratingChange === 0) return 'draw';
+    }
+    
+    return 'unknown';
+}
+
+function getOpponent(game, username) {
+    return game.white === username ? game.black : game.white;
+}
+
+function renderAdminName(name, adminRank, color) {
+    if (adminRank === 'creator') {
+        return `<span class="creator-cloud-aura creator-cloud-aura-sm">${name}</span>`;
+    } else if (adminRank === 'dragon') {
+        return `<i class="fas fa-dragon" style="color: #FFD700; text-shadow: 0 0 8px #FFD700, 0 0 15px #FF8C00; font-size: 12px; margin-right: 3px;"></i><span style="color: ${color}; text-shadow: 0 0 6px rgba(255,215,0,0.8), 0 0 12px rgba(255,215,0,0.6);">${name}</span>`;
+    } else if (adminRank === 'galaxy') {
+        return `<span class="galaxy-black-hole galaxy-black-hole-xs" style="margin-right: 3px;"></span><span style="color: ${color}; text-shadow: 0 0 8px #9400D3, 0 0 15px #8A2BE2;">${name}</span>`;
+    } else if (adminRank === 'admin') {
+        return `<i class="fas fa-crown" style="color: #1a1a1a; text-shadow: 0 0 2px #fff, 0 0 4px #fff; font-size: 12px; margin-right: 3px;"></i><span style="color: ${color};">${name}</span>`;
+    } else {
+        return `<span style="color: ${color};">${name}</span>`;
+    }
+}
+
+function displayGames() {
+    const startIndex = (currentPage - 1) * gamesPerPage;
+    const endIndex = startIndex + gamesPerPage;
+    const gamesToShow = filteredGames.slice(startIndex, endIndex);
+
+    if (gamesToShow.length === 0) {
+        document.getElementById('games-container').innerHTML = 
+            '<div style="text-align: center; opacity: 0.6; padding: 20px;">No games found</div>';
+        document.getElementById('pagination').style.display = 'none';
+        return;
+    }
+
+    const username = '{{ username }}';
+    const gamesHtml = gamesToShow.map(game => {
+        const opponent = getOpponent(game, username);
+        // Determine result from user's perspective using the same logic as statistics
+        const result = getGameResult(game, username);
+        
+        const resultColor = result === 'win' ? '#28a745' : 
+                           result === 'loss' ? '#dc3545' : 
+                           result === 'draw' ? '#ffc107' : '#6c757d';
+
+        const userRatingChange = game.user_rating_change || 0;
+        const ratingChangeText = userRatingChange !== 0 ? 
+            (userRatingChange > 0 ? `+${userRatingChange}` : `${userRatingChange}`) : '';
+
+        const userColor = game.white === username ? 'white' : 'black';
+        const colorIcon = userColor === 'white' ? '⚪' : '⚫';
+
+        const whiteHtml = renderAdminName(game.white, game.white_admin_rank, game.white_color || '#c9c9c9');
+        const blackHtml = renderAdminName(game.black, game.black_admin_rank, game.black_color || '#c9c9c9');
+        const opponentAdminRank = game.white === username ? game.black_admin_rank : game.white_admin_rank;
+        const opponentColor = game.white === username ? game.black_color : game.white_color;
+        const opponentHtml = renderAdminName(opponent, opponentAdminRank, opponentColor || '#3893e8');
+
+        return `
+            <div style="border: 1px solid #3c3c3c; padding: 15px; margin-bottom: 10px; border-radius: 5px; background: #1a1a1a;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <span style="font-size: 16px;">${colorIcon}</span>
+                        <div>
+                            <div style="font-size: 16px; display: flex; align-items: center; gap: 5px;">
+                                <strong>${whiteHtml}</strong> 
+                                <span style="color: #888;">vs</span> 
+                                <strong>${blackHtml}</strong>
+                            </div>
+                            <div style="opacity: 0.7; font-size: 14px;">
+                                vs <a href="/profile/${opponent}" style="text-decoration: none;">${opponentHtml}</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div style="text-align: right;">
+                        <div style="color: ${resultColor}; font-weight: bold; font-size: 16px;">
+                            ${result.charAt(0).toUpperCase() + result.slice(1)}
+                            ${ratingChangeText ? `<span style="font-size: 12px; margin-left: 5px;">(${ratingChangeText})</span>` : ''}
+                        </div>
+                        <div style="opacity: 0.7; font-size: 12px;">
+                            ${game.end_reason || 'Normal'}
+                        </div>
+                    </div>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div style="opacity: 0.7; font-size: 14px;">
+                        ${game.date} • ${game.time_control}
+                        ${game.move_count ? ` • ${game.move_count} moves` : ''}
+                    </div>
+                    <div style="display: flex; gap: 10px;">
+                        <a href="/analysis/${game.id}" style="color: #3893e8; text-decoration: none; font-size: 14px; padding: 5px 10px; border: 1px solid #3893e8; border-radius: 3px;">
+                            <i class="fas fa-chart-line"></i> Analyze
+                        </a>
+                        ${game.tournament_id ? `<span style="color: #f0d060; font-size: 12px;"><i class="fas fa-trophy"></i> Tournament</span>` : ''}
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    document.getElementById('games-container').innerHTML = gamesHtml;
+
+    // Update pagination
+    const totalPages = Math.ceil(filteredGames.length / gamesPerPage);
+    if (totalPages > 1) {
+        document.getElementById('pagination').style.display = 'block';
+        document.getElementById('page-info').textContent = `Page ${currentPage} of ${totalPages}`;
+        document.getElementById('prev-btn').disabled = currentPage === 1;
+        document.getElementById('next-btn').disabled = currentPage === totalPages;
+    } else {
+        document.getElementById('pagination').style.display = 'none';
+    }
+}
+
+function searchGames() {
+    const opponentSearch = document.getElementById('opponent-search').value.toLowerCase().trim();
+    const timeControlFilter = document.getElementById('time-control-filter').value;
+    const resultFilter = document.getElementById('result-filter').value;
+    const username = '{{ username }}';
+
+    filteredGames = allGames.filter(game => {
+        // Opponent filter
+        if (opponentSearch) {
+            const opponent = getOpponent(game, username);
+            if (!opponent.toLowerCase().includes(opponentSearch)) {
+                return false;
+            }
+        }
+
+        // Time control filter
+        if (timeControlFilter && game.time_control !== timeControlFilter) {
+            return false;
+        }
+
+        // Result filter
+        if (resultFilter) {
+            const result = getGameResult(game, username);
+            if (result !== resultFilter) {
+                return false;
+            }
+        }
+
+        return true;
+    });
+
+    currentPage = 1;
+    updateStatistics();
+    displayGames();
+}
+
+function clearFilters() {
+    document.getElementById('opponent-search').value = '';
+    document.getElementById('time-control-filter').value = '';
+    document.getElementById('result-filter').value = '';
+
+    filteredGames = allGames;
+    currentPage = 1;
+    updateStatistics();
+    displayGames();
+}
+
+function changePage(direction) {
+    const totalPages = Math.ceil(filteredGames.length / gamesPerPage);
+    const newPage = currentPage + direction;
+
+    if (newPage >= 1 && newPage <= totalPages) {
+        currentPage = newPage;
+        displayGames();
+        window.scrollTo(0, 0);
+    }
+}
+
+// Allow search on Enter key
+document.getElementById('opponent-search').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+        searchGames();
+    }
+});
+</script>
+{% endblock %}

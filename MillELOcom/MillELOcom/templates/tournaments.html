@@ -1,0 +1,1122 @@
+{% extends "base.html" %}
+
+{% block title %}Tournaments - MillELO.com{% endblock %}
+
+{% block content %}
+<style>
+    .tournament-lobby {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+    
+    .tournament-header {
+        display: flex;
+        align-items: center;
+        margin-bottom: 20px;
+    }
+    
+    .tournament-header h2 {
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    
+    /* Lichess-style Timeline - HALF SCREEN */
+    .timeline-wrapper {
+        position: relative;
+        background: #1a1816;
+        border-radius: 10px;
+        margin-bottom: 25px;
+        border: 2px solid #3c3a36;
+        overflow: hidden;
+    }
+    
+    .timeline-container {
+        position: relative;
+        height: 55vh;
+        min-height: 420px;
+        max-height: 600px;
+        overflow-x: scroll;
+        overflow-y: hidden;
+        scrollbar-width: thin;
+        scrollbar-color: #555 #1a1816;
+    }
+    
+    .timeline-container::-webkit-scrollbar {
+        height: 12px;
+    }
+    
+    .timeline-container::-webkit-scrollbar-track {
+        background: #1a1816;
+    }
+    
+    .timeline-container::-webkit-scrollbar-thumb {
+        background: #555;
+        border-radius: 6px;
+    }
+    
+    .timeline-track {
+        position: relative;
+        height: 100%;
+        min-width: 100%;
+    }
+    
+    /* NOW marker - fixed vertical line - BIGGER */
+    .now-marker {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        width: 4px;
+        background: linear-gradient(180deg, #f0d060 0%, #e8c040 100%);
+        z-index: 100;
+        box-shadow: 0 0 20px rgba(240, 208, 96, 0.7), 0 0 40px rgba(240, 208, 96, 0.3);
+    }
+    
+    .now-marker::before {
+        content: 'NOW';
+        position: absolute;
+        top: 12px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: linear-gradient(180deg, #f0d060 0%, #e8c040 100%);
+        color: #1a1816;
+        padding: 5px 14px;
+        border-radius: 15px;
+        font-size: 13px;
+        font-weight: bold;
+        white-space: nowrap;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    }
+    
+    /* Time tick marks - move with timeline - BIGGER */
+    .time-tick {
+        position: absolute;
+        top: 50px;
+        bottom: 0;
+        width: 2px;
+        background: #4a4a4a;
+    }
+    
+    .time-tick.hour {
+        background: #888;
+        width: 3px;
+    }
+    
+    .time-tick-label {
+        position: absolute;
+        top: -35px;
+        left: 50%;
+        transform: translateX(-50%);
+        font-size: 16px;
+        color: #999;
+        white-space: nowrap;
+        font-weight: 500;
+    }
+    
+    .time-tick.hour .time-tick-label {
+        color: #fff;
+        font-weight: 700;
+        font-size: 18px;
+        text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+    }
+    
+    /* Tournament blocks on timeline - BIGGER */
+    .timeline-tournament {
+        position: absolute;
+        height: 70px;
+        background: #262421;
+        border-radius: 6px;
+        border-left: 5px solid;
+        padding: 8px 15px;
+        cursor: pointer;
+        transition: transform 0.15s, box-shadow 0.15s;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        min-width: 140px;
+        overflow: hidden;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    }
+    
+    .timeline-tournament:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+        z-index: 50;
+    }
+    
+    .timeline-tournament.active {
+        border-left-color: #629924;
+        background: linear-gradient(90deg, rgba(98, 153, 36, 0.25) 0%, #262421 100%);
+    }
+    
+    /* Different colors by tournament type for timeline */
+    .timeline-tournament.active.type-daily {
+        border-left-color: #629924;
+        background: linear-gradient(90deg, rgba(98, 153, 36, 0.25) 0%, #262421 100%);
+    }
+    
+    .timeline-tournament.active.type-weekly {
+        border-left-color: #2196F3;
+        background: linear-gradient(90deg, rgba(33, 150, 243, 0.25) 0%, #262421 100%);
+    }
+    
+    .timeline-tournament.active.type-monthly {
+        border-left-color: #F44336;
+        background: linear-gradient(90deg, rgba(244, 67, 54, 0.25) 0%, #262421 100%);
+    }
+    
+    .timeline-tournament.active.type-marathon {
+        border-left-color: #9C27B0;
+        background: linear-gradient(90deg, rgba(156, 39, 176, 0.25) 0%, #262421 100%);
+    }
+    
+    .timeline-tournament.active.type-world_cup {
+        border-left-color: #FFD700;
+        background: linear-gradient(90deg, rgba(255, 215, 0, 0.25) 0%, #262421 100%);
+    }
+    
+    /* Admin tournaments - black glow, black styling */
+    .timeline-tournament.admin-only {
+        border-left-color: #000 !important;
+        background: linear-gradient(90deg, rgba(0, 0, 0, 0.9) 0%, rgba(10, 10, 10, 0.95) 100%) !important;
+        box-shadow: 0 0 25px rgba(0,0,0,1), 0 0 50px rgba(0,0,0,0.8), 0 0 75px rgba(0,0,0,0.6) !important;
+        border: 2px solid #000 !important;
+    }
+    
+    .timeline-tournament.admin-only .timeline-tournament-name {
+        color: #e0e0e0;
+    }
+    
+    .timeline-tournament.admin-only .admin-name-aura {
+        text-shadow: 0 0 10px rgba(255,255,255,0.9), 0 0 20px rgba(255,255,255,0.6);
+    }
+    
+    .timeline-tournament.admin-only .timeline-tournament-timer {
+        color: #666 !important;
+        background: rgba(0,0,0,0.9) !important;
+    }
+    
+    .timeline-tournament.admin-only .timeline-tournament-badge {
+        background: #1a1a1a !important;
+        color: #999 !important;
+    }
+    
+    .timeline-tournament.scheduled {
+        border-left-color: #bf811d;
+    }
+    
+    .timeline-tournament.finished {
+        border-left-color: #666;
+        opacity: 0.5;
+    }
+    
+    .timeline-tournament-name {
+        font-size: 14px;
+        font-weight: 600;
+        color: #e0e0e0;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    
+    .timeline-tournament-meta {
+        font-size: 12px;
+        color: #999;
+        display: flex;
+        gap: 12px;
+        margin-top: 6px;
+        align-items: center;
+    }
+    
+    .timeline-tournament-timer {
+        color: #629924;
+        font-weight: 600;
+        font-size: 13px;
+    }
+    
+    .timeline-tournament-timer.starting {
+        color: #bf811d;
+    }
+    
+    .timeline-tournament-badge {
+        position: absolute;
+        top: 6px;
+        right: 6px;
+        padding: 3px 8px;
+        border-radius: 4px;
+        font-size: 10px;
+        font-weight: 700;
+        text-transform: uppercase;
+    }
+    
+    .timeline-tournament-badge.live {
+        background: #629924;
+        color: white;
+        animation: pulse-badge 1.5s infinite;
+    }
+    
+    .timeline-tournament-badge.soon {
+        background: #bf811d;
+        color: white;
+    }
+    
+    @keyframes pulse-badge {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.6; }
+    }
+    
+    /* Tournament grid below timeline */
+    .tournaments-container {
+        background: #262421;
+        border-radius: 8px;
+        padding: 15px;
+        min-height: 100px;
+        border: 1px solid #3c3a36;
+    }
+    
+    .tournament-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-bottom: 15px;
+    }
+    
+    .tournament-row:last-child {
+        margin-bottom: 0;
+    }
+    
+    .row-label {
+        width: 100%;
+        font-size: 12px;
+        color: #888;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        margin-bottom: 8px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    
+    .row-label i {
+        font-size: 10px;
+    }
+    
+    /* Tournament card */
+    .tournament-card {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        background: #1a1816;
+        border-radius: 4px;
+        padding: 10px 15px;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        border-left: 4px solid;
+        min-width: 200px;
+        max-width: 320px;
+        flex: 1;
+    }
+    
+    .tournament-card:hover {
+        background: #2a2725;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+    
+    .tournament-card.live {
+        border-left-color: #629924;
+    }
+    
+    /* Different colors by tournament type */
+    .tournament-card.live.type-daily {
+        border-left-color: #629924;
+    }
+    
+    .tournament-card.live.type-weekly {
+        border-left-color: #2196F3;
+    }
+    
+    .tournament-card.live.type-monthly {
+        border-left-color: #F44336;
+    }
+    
+    .tournament-card.live.type-marathon {
+        border-left-color: #9C27B0;
+    }
+    
+    .tournament-card.live.type-world_cup {
+        border-left-color: #FFD700;
+    }
+    
+    .tournament-card.scheduled {
+        border-left-color: #bf811d;
+    }
+    
+    .tournament-card.finished {
+        border-left-color: #666;
+        opacity: 0.7;
+    }
+    
+    .tournament-card.type-admin {
+        border-left-color: #000 !important;
+        background: linear-gradient(145deg, rgba(10,10,10,0.98) 0%, rgba(0,0,0,0.98) 100%) !important;
+        box-shadow: 0 0 25px rgba(0,0,0,1), 0 0 50px rgba(0,0,0,0.9), 0 0 75px rgba(0,0,0,0.7), inset 0 0 20px rgba(0,0,0,0.5) !important;
+        border: 2px solid #000 !important;
+    }
+    
+    .tournament-card.type-admin .tournament-name {
+        color: #e0e0e0;
+    }
+    
+    .tournament-card.type-admin .admin-name-aura {
+        text-shadow: 0 0 10px rgba(255,255,255,0.9), 0 0 20px rgba(255,255,255,0.6), 0 0 30px rgba(255,255,255,0.3);
+    }
+    
+    .tournament-card.type-admin .tournament-time {
+        color: #666;
+    }
+    
+    .tournament-card.type-admin .countdown,
+    .tournament-card.type-admin .admin-countdown {
+        color: #666 !important;
+        background: rgba(0,0,0,0.9) !important;
+    }
+    
+    .admin-crown {
+        display: inline-block;
+        color: #000;
+        margin-right: 5px;
+        text-shadow: 0 0 8px rgba(255,255,255,1), 0 0 15px rgba(255,255,255,0.8);
+        font-size: 12px;
+    }
+    
+    .tournament-time {
+        font-size: 11px;
+        color: #f0d060;
+        font-weight: 500;
+        margin-bottom: 4px;
+        letter-spacing: 0.5px;
+    }
+    
+    .tournament-name {
+        font-size: 14px;
+        font-weight: 600;
+        color: #e0e0e0;
+        margin-bottom: 5px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+    
+    .tournament-meta {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 11px;
+        color: #999;
+    }
+    
+    .time-control {
+        background: #0f0e0c;
+        padding: 2px 6px;
+        border-radius: 3px;
+        font-weight: 500;
+    }
+    
+    .player-count {
+        display: flex;
+        align-items: center;
+        gap: 3px;
+    }
+    
+    .countdown {
+        color: #bf811d;
+        font-weight: 500;
+    }
+    
+    .countdown.ending {
+        color: #629924;
+    }
+    
+    .status-badge {
+        padding: 2px 6px;
+        border-radius: 3px;
+        font-size: 9px;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+    
+    .status-badge.live {
+        background: #629924;
+        color: white;
+    }
+    
+    .status-badge.starting {
+        background: #bf811d;
+        color: white;
+    }
+    
+    .joined-badge {
+        background: #3893e8;
+        color: white;
+        padding: 2px 6px;
+        border-radius: 3px;
+        font-size: 9px;
+        font-weight: 600;
+    }
+    
+    /* Empty state */
+    .no-tournaments {
+        text-align: center;
+        padding: 40px 20px;
+    }
+    
+    .no-tournaments h3 {
+        color: #f0d060;
+        margin-bottom: 15px;
+    }
+    
+    .schedule-info {
+        margin-top: 30px;
+        text-align: left;
+        max-width: 500px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+    
+    .schedule-item {
+        display: flex;
+        align-items: center;
+        padding: 12px;
+        margin: 8px 0;
+        background: #1a1816;
+        border-radius: 4px;
+        border-left: 4px solid;
+    }
+    
+    .schedule-item.daily { border-left-color: #4CAF50; }
+    .schedule-item.weekly { border-left-color: #2196F3; }
+    .schedule-item.monthly { border-left-color: #F44336; }
+    .schedule-item.marathon { border-left-color: #9C27B0; }
+    
+    .schedule-item-icon {
+        margin-right: 12px;
+        font-size: 20px;
+    }
+    
+    .schedule-item-info h4 {
+        margin: 0 0 4px 0;
+        font-size: 14px;
+    }
+    
+    .schedule-item-info p {
+        margin: 0;
+        font-size: 12px;
+        color: #888;
+    }
+</style>
+
+<div class="tournament-lobby">
+    <div class="tournament-header">
+        <h2><i class="fas fa-trophy" style="color: #f0d060;"></i> Arena Tournaments</h2>
+    </div>
+    
+    <!-- Lichess-style Timeline -->
+    <div class="timeline-wrapper">
+        <div class="timeline-container" id="timeline-container">
+            <div class="timeline-track" id="timeline-track">
+                <div class="now-marker" id="now-marker"></div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Tournament Cards - Rendered by JavaScript for real-time status -->
+    <div class="tournaments-container" id="tournaments-cards">
+        <!-- Cards will be rendered by JavaScript -->
+    </div>
+</div>
+
+<script>
+    // Server time for accurate status calculation (prevents client/server time mismatch)
+    var serverNowStr = "{{ server_now }}";
+    var serverNow = serverNowStr ? new Date(serverNowStr) : new Date();
+    var clientNow = new Date();
+    var serverClientOffset = isNaN(serverNow.getTime()) ? 0 : (serverNow.getTime() - clientNow.getTime());
+    
+    // Function to get current server time (adjusted for elapsed time since page load)
+    function getServerTime() {
+        return new Date(Date.now() + serverClientOffset);
+    }
+    
+    var tournamentsData = [
+        {% for t in tournaments %}
+        {
+            id: "{{ t.id }}",
+            name: "{{ t.name }}",
+            status: "{{ t.status }}",
+            tournament_type: "{{ t.tournament_type }}",
+            start_time: "{{ t.start_time }}",
+            end_time: "{{ t.end_time }}",
+            time_control: "{{ t.time_control }}",
+            color: "{{ t.color }}",
+            player_count: {{ t.players|length }},
+            joined: {{ 'true' if session.username in t.players else 'false' }},
+            admin_only: {{ 'true' if t.admin_only else 'false' }}
+        }{% if not loop.last %},{% endif %}
+        {% endfor %}
+    ];
+    
+    var PIXELS_PER_MINUTE = 6;
+    var HOURS_BEFORE = 1;
+    var HOURS_AFTER = 6;
+    var NOW_OFFSET_PERCENT = 0.15;
+    var TOURNAMENT_HEIGHT = 75;
+    var TOURNAMENT_GAP = 18;
+    var TIMELINE_TOP_OFFSET = 60;
+    
+    function initTimeline() {
+        var container = document.getElementById('timeline-container');
+        var track = document.getElementById('timeline-track');
+        var nowMarker = document.getElementById('now-marker');
+        
+        if (!container || !track || !nowMarker) return;
+        
+        var containerWidth = container.offsetWidth;
+        var totalMinutes = (HOURS_BEFORE + HOURS_AFTER) * 60;
+        var trackWidth = Math.max(totalMinutes * PIXELS_PER_MINUTE, containerWidth + 200);
+        var nowPosition = containerWidth * NOW_OFFSET_PERCENT;
+        
+        track.style.width = trackWidth + 'px';
+        nowMarker.style.left = nowPosition + 'px';
+        
+        renderTimeLabels(nowPosition);
+        renderTournaments(nowPosition);
+        
+        container.scrollLeft = 0;
+    }
+    
+    function renderTimeLabels(nowPosition) {
+        var track = document.getElementById('timeline-track');
+        if (!track) return;
+        
+        var existingTicks = track.querySelectorAll('.time-tick');
+        existingTicks.forEach(function(tick) { tick.remove(); });
+        
+        // Use LOCAL time for labels (not server time)
+        var localNow = new Date();
+        var totalMinutes = (HOURS_BEFORE + HOURS_AFTER) * 60;
+        
+        // Show ticks every 30 minutes
+        for (var m = -HOURS_BEFORE * 60; m <= HOURS_AFTER * 60; m += 30) {
+            var tickTime = new Date(localNow.getTime() + m * 60 * 1000);
+            var tickPosition = nowPosition + m * PIXELS_PER_MINUTE;
+            
+            if (tickPosition < -50 || tickPosition > track.offsetWidth + 50) continue;
+            
+            var isHour = tickTime.getMinutes() === 0;
+            
+            var tick = document.createElement('div');
+            tick.className = 'time-tick' + (isHour ? ' hour' : '');
+            tick.style.left = tickPosition + 'px';
+            
+            // Format time in user's local timezone (24-hour format)
+            var hours = tickTime.getHours();
+            var minutes = tickTime.getMinutes();
+            var timeStr = hours + ':' + String(minutes).padStart(2, '0');
+            
+            var label = document.createElement('span');
+            label.className = 'time-tick-label';
+            label.textContent = timeStr;
+            tick.appendChild(label);
+            
+            track.appendChild(tick);
+        }
+    }
+    
+    function renderTournaments(nowPosition) {
+        var track = document.getElementById('timeline-track');
+        var container = document.getElementById('timeline-container');
+        if (!track || !container) return;
+        
+        var existingTournaments = track.querySelectorAll('.timeline-tournament');
+        existingTournaments.forEach(function(t) { t.remove(); });
+        
+        var now = getServerTime();
+        
+        var typeRows = {};
+        
+        tournamentsData.forEach(function(tournament) {
+            var startTime = new Date(tournament.start_time);
+            var endTime = new Date(tournament.end_time);
+            var durationMinutes = (endTime - startTime) / 60000;
+            
+            var minutesFromNow = (startTime - now) / 60000;
+            var leftPosition = nowPosition + minutesFromNow * PIXELS_PER_MINUTE;
+            var width = Math.max(durationMinutes * PIXELS_PER_MINUTE, 180);
+            
+            var rightEdge = leftPosition + width;
+            if (rightEdge < -100 || leftPosition > track.offsetWidth + 100) {
+                return;
+            }
+            
+            // Use server-provided status as authoritative (prevents client/server time mismatch)
+            var status = tournament.status;
+            var timeRemaining;
+            if (status === 'active') {
+                timeRemaining = endTime - now;
+            } else if (status === 'scheduled') {
+                timeRemaining = startTime - now;
+            } else {
+                timeRemaining = 0;
+            }
+            
+            var tType = tournament.tournament_type || 'daily';
+            var isAdminTournament = tournament.admin_only === true;
+            var CARD_SPACING = 20;
+            
+            // Fixed row assignments by tournament type
+            // Daily & Weekly: rows 0-1, Admin: row 2, World Cup: row 3, Monthly: row 4
+            var typeRowRanges = {
+                'daily': [0, 1],
+                'weekly': [0, 1],
+                'monthly': [4],
+                'marathon': [4],
+                'world_cup': [3]
+            };
+            
+            // Admin tournaments ALWAYS go to row 2 (3rd row)
+            var allowedRows = isAdminTournament ? [2] : (typeRowRanges[tType] || [0, 1]);
+            
+            // Initialize row tracking if needed
+            if (!typeRows['_all']) {
+                typeRows['_all'] = [[], [], [], [], []];  // 5 rows
+            }
+            var allRows = typeRows['_all'];
+            
+            // Find first available row from allowed rows
+            var actualRow = -1;
+            for (var ri = 0; ri < allowedRows.length; ri++) {
+                var tryRow = allowedRows[ri];
+                if (!allRows[tryRow]) allRows[tryRow] = [];
+                var overlap = false;
+                for (var j = 0; j < allRows[tryRow].length; j++) {
+                    var existing = allRows[tryRow][j];
+                    if (!(leftPosition >= existing.right + CARD_SPACING || rightEdge <= existing.left - CARD_SPACING)) {
+                        overlap = true;
+                        break;
+                    }
+                }
+                if (!overlap) {
+                    actualRow = tryRow;
+                    break;
+                }
+            }
+            
+            // If all allowed rows have overlap, use last allowed row
+            if (actualRow === -1) {
+                actualRow = allowedRows[allowedRows.length - 1];
+            }
+            
+            allRows[actualRow].push({ left: leftPosition, right: rightEdge, id: tournament.id });
+            
+            var block = document.createElement('div');
+            block.className = 'timeline-tournament ' + status + ' type-' + tType + (isAdminTournament ? ' admin-only' : '');
+            block.style.left = leftPosition + 'px';
+            block.style.width = width + 'px';
+            block.style.top = (TIMELINE_TOP_OFFSET + actualRow * (TOURNAMENT_HEIGHT + TOURNAMENT_GAP)) + 'px';
+            if (!isAdminTournament) {
+                block.style.borderLeftColor = tournament.color;
+            }
+            block.setAttribute('data-id', tournament.id);
+            block.setAttribute('data-start', tournament.start_time);
+            block.setAttribute('data-end', tournament.end_time);
+            
+            block.onclick = function() {
+                handleTournamentClick(tournament.id, tournament.joined);
+            };
+            
+            var nameSpan = document.createElement('div');
+            nameSpan.className = 'timeline-tournament-name' + (isAdminTournament ? ' admin-name-aura' : '');
+            if (isAdminTournament) {
+                nameSpan.innerHTML = '<span class="admin-crown"><i class="fas fa-crown"></i></span>' + tournament.name;
+            } else {
+                nameSpan.textContent = tournament.name;
+            }
+            block.appendChild(nameSpan);
+            
+            var metaSpan = document.createElement('div');
+            metaSpan.className = 'timeline-tournament-meta';
+            
+            var timerText = '';
+            if (status === 'active' && timeRemaining > 0) {
+                timerText = '<span class="timeline-tournament-timer">' + formatTime(timeRemaining) + ' left</span>';
+            } else if (status === 'scheduled' && timeRemaining > 0) {
+                timerText = '<span class="timeline-tournament-timer starting">in ' + formatTime(timeRemaining) + '</span>';
+            }
+            
+            metaSpan.innerHTML = '<span>' + tournament.time_control + '</span>' +
+                                '<span><i class="fas fa-user"></i> ' + tournament.player_count + '</span>' +
+                                timerText;
+            block.appendChild(metaSpan);
+            
+            if (status === 'active') {
+                var badge = document.createElement('span');
+                badge.className = 'timeline-tournament-badge live';
+                badge.textContent = 'LIVE';
+                block.appendChild(badge);
+            } else if (status === 'scheduled') {
+                var badge = document.createElement('span');
+                badge.className = 'timeline-tournament-badge soon';
+                badge.textContent = 'SOON';
+                block.appendChild(badge);
+            }
+            
+            track.appendChild(block);
+        });
+        
+        // Fixed 5 rows: Daily/Weekly (0-1), Monthly (2), Marathon (3), World Cup (4)
+        var totalRows = 5;
+        
+        var newHeight = TIMELINE_TOP_OFFSET + totalRows * (TOURNAMENT_HEIGHT + TOURNAMENT_GAP) + 15;
+        container.style.height = Math.max(200, newHeight) + 'px';
+    }
+    
+    function formatTime(ms) {
+        var totalSeconds = Math.floor(ms / 1000);
+        var hours = Math.floor(totalSeconds / 3600);
+        var minutes = Math.floor((totalSeconds % 3600) / 60);
+        var seconds = totalSeconds % 60;
+        
+        if (hours > 0) {
+            return hours + 'h ' + minutes + 'm';
+        } else if (minutes > 0) {
+            return minutes + 'm ' + seconds + 's';
+        } else {
+            return seconds + 's';
+        }
+    }
+    
+    // Format time in Eastern Time (ET)
+    function formatEasternTime(dateStr) {
+        var date = new Date(dateStr);
+        var options = {
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true,
+            timeZone: 'America/New_York'
+        };
+        return date.toLocaleTimeString('en-US', options) + ' ET';
+    }
+    
+    // Format relative time for far-off tournaments
+    function formatRelativeStart(ms) {
+        var totalMinutes = Math.floor(ms / 60000);
+        var totalHours = Math.floor(totalMinutes / 60);
+        var totalDays = Math.floor(totalHours / 24);
+        var totalMonths = Math.floor(totalDays / 30);
+        
+        if (totalMonths >= 1) {
+            return 'in ' + totalMonths + (totalMonths === 1 ? ' month' : ' months');
+        } else if (totalDays >= 1) {
+            return 'in ' + totalDays + (totalDays === 1 ? ' day' : ' days');
+        } else if (totalHours >= 1) {
+            return 'in ' + totalHours + 'h ' + (totalMinutes % 60) + 'm';
+        } else {
+            return 'in ' + totalMinutes + 'm';
+        }
+    }
+    
+    function updateTimelineTimers() {
+        var container = document.getElementById('timeline-container');
+        var nowMarker = document.getElementById('now-marker');
+        if (!container || !nowMarker) return;
+        
+        var containerWidth = container.offsetWidth;
+        var nowPosition = containerWidth * NOW_OFFSET_PERCENT;
+        
+        renderTimeLabels(nowPosition);
+        renderTournaments(nowPosition);
+    }
+    
+    function setupHorizontalScroll() {
+        var container = document.getElementById('timeline-container');
+        if (!container) return;
+        
+        container.addEventListener('wheel', function(e) {
+            if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+                e.preventDefault();
+                container.scrollLeft += e.deltaY;
+            }
+        }, { passive: false });
+    }
+    
+    function handleTournamentClick(tournamentId, isJoined) {
+        // Always go to leaderboard - join/leave buttons are on that page
+        viewTournament(tournamentId);
+    }
+    
+    function viewTournament(tournamentId) {
+        window.location.href = '/tournament/' + tournamentId + '/leaderboard';
+    }
+    
+    function viewResults(tournamentId) {
+        window.location.href = '/tournament/' + tournamentId + '/results';
+    }
+    
+    function updateCountdowns() {
+        var now = getServerTime();
+        
+        document.querySelectorAll('.countdown[data-start-time]').forEach(function(element) {
+            var startTime = element.getAttribute('data-start-time');
+            if (!startTime) return;
+            
+            var start = new Date(startTime);
+            var diff = start - now;
+            
+            if (diff > 0) {
+                element.textContent = 'in ' + formatTime(diff);
+            } else {
+                element.textContent = 'Starting...';
+            }
+        });
+        
+        document.querySelectorAll('.countdown[data-end-time]').forEach(function(element) {
+            var endTime = element.getAttribute('data-end-time');
+            if (!endTime) return;
+            
+            var end = new Date(endTime);
+            var diff = end - now;
+            
+            if (diff > 0) {
+                element.textContent = formatTime(diff) + ' left';
+            } else {
+                element.textContent = 'Finished';
+            }
+        });
+    }
+    
+    function setupSocketEvents() {
+        if (typeof socket !== 'undefined' && socket) {
+            socket.on('tournament_joined', function(data) {
+                location.reload();
+            });
+            
+            socket.on('tournament_join_error', function(data) {
+                alert(data.error);
+            });
+            
+            socket.on('tournament_left', function(data) {
+                location.reload();
+            });
+            
+            socket.on('tournament_game_start', function(data) {
+                window.location.href = '/play?room=' + data.room_id;
+            });
+            
+            // Real-time tournament updates (when admin creates new tournament)
+            socket.on('tournaments_updated', function(data) {
+                console.log('Tournaments updated, refreshing list...');
+                // Fetch fresh tournament data and re-render
+                fetch('/api/tournaments')
+                    .then(function(response) { return response.json(); })
+                    .then(function(data) {
+                        // Update tournamentsData with fresh data
+                        if (data.tournaments) {
+                            // Merge new tournaments into existing data
+                            var existingIds = tournamentsData.map(function(t) { return t.id; });
+                            data.tournaments.forEach(function(newT) {
+                                if (existingIds.indexOf(newT.id) === -1) {
+                                    tournamentsData.push(newT);
+                                } else {
+                                    // Update existing tournament
+                                    for (var i = 0; i < tournamentsData.length; i++) {
+                                        if (tournamentsData[i].id === newT.id) {
+                                            tournamentsData[i] = newT;
+                                            break;
+                                        }
+                                    }
+                                }
+                            });
+                            // Re-render timeline and cards
+                            updateTimeline();
+                            renderTournamentCards();
+                        }
+                    })
+                    .catch(function(error) {
+                        console.error('Failed to refresh tournaments:', error);
+                    });
+            });
+        } else {
+            setTimeout(setupSocketEvents, 100);
+        }
+    }
+    
+    function renderTournamentCards() {
+        var container = document.getElementById('tournaments-cards');
+        if (!container) return;
+        
+        var now = getServerTime();
+        var liveTournaments = [];
+        var scheduledTournaments = [];
+        var finishedTournaments = [];
+        
+        tournamentsData.forEach(function(t) {
+            var startTime = new Date(t.start_time);
+            var endTime = new Date(t.end_time);
+            
+            // Use server-provided status as authoritative
+            if (t.status === 'active') {
+                t.currentStatus = 'active';
+                t.timeRemaining = endTime - now;
+                liveTournaments.push(t);
+            } else if (t.status === 'scheduled') {
+                t.currentStatus = 'scheduled';
+                t.timeRemaining = startTime - now;
+                scheduledTournaments.push(t);
+            } else {
+                t.currentStatus = 'finished';
+                t.timeRemaining = 0;
+                finishedTournaments.push(t);
+            }
+        });
+        
+        var html = '';
+        
+        // Separate admin tournaments from regular ones
+        var adminTournaments = liveTournaments.filter(function(t) { return t.admin_only; });
+        var regularLiveTournaments = liveTournaments.filter(function(t) { return !t.admin_only; });
+        
+        // Row 1: Live Now (regular tournaments)
+        if (regularLiveTournaments.length > 0) {
+            html += '<div class="tournament-row">';
+            html += '<div class="row-label"><i class="fas fa-circle" style="color: #629924;"></i> Live Now</div>';
+            regularLiveTournaments.forEach(function(t) {
+                html += '<div class="tournament-card live" onclick="handleTournamentClick(\'' + t.id + '\', ' + t.joined + ')" style="border-left-color: ' + t.color + ';">';
+                html += '<div class="tournament-time">Started at ' + formatEasternTime(t.start_time) + '</div>';
+                html += '<div class="tournament-name">';
+                html += t.name;
+                if (t.joined) html += ' <span class="joined-badge">JOINED</span>';
+                html += ' <span class="status-badge live">LIVE</span></div>';
+                html += '<div class="tournament-meta">';
+                html += '<span class="time-control">' + t.time_control + '</span>';
+                html += '<span class="player-count"><i class="fas fa-user"></i> ' + t.player_count + '</span>';
+                html += '<span class="countdown ending">' + formatTime(t.timeRemaining) + ' left</span>';
+                html += '</div></div>';
+            });
+            html += '</div>';
+        }
+        
+        // Row 2: Starting Soon (regular tournaments only)
+        var regularScheduledTournaments = scheduledTournaments.filter(function(t) { return !t.admin_only; });
+        if (regularScheduledTournaments.length > 0) {
+            html += '<div class="tournament-row">';
+            html += '<div class="row-label"><i class="fas fa-clock" style="color: #bf811d;"></i> Starting Soon</div>';
+            regularScheduledTournaments.forEach(function(t) {
+                var timeDisplay = t.timeRemaining > 24 * 60 * 60 * 1000 ? formatRelativeStart(t.timeRemaining) : 'in ' + formatTime(t.timeRemaining);
+                html += '<div class="tournament-card scheduled" onclick="handleTournamentClick(\'' + t.id + '\', ' + t.joined + ')" style="border-left-color: ' + t.color + ';">';
+                html += '<div class="tournament-time">' + formatEasternTime(t.start_time) + '</div>';
+                html += '<div class="tournament-name">';
+                html += t.name;
+                if (t.joined) html += ' <span class="joined-badge">JOINED</span>';
+                html += ' <span class="status-badge starting">SOON</span></div>';
+                html += '<div class="tournament-meta">';
+                html += '<span class="time-control">' + t.time_control + '</span>';
+                html += '<span class="player-count"><i class="fas fa-user"></i> ' + t.player_count + '</span>';
+                html += '<span class="countdown">' + timeDisplay + '</span>';
+                html += '</div></div>';
+            });
+            html += '</div>';
+        }
+        
+        // Row 3: Recently Finished (regular tournaments)
+        var regularFinished = finishedTournaments.filter(function(t) { return !t.admin_only; });
+        if (regularFinished.length > 0) {
+            html += '<div class="tournament-row">';
+            html += '<div class="row-label"><i class="fas fa-flag-checkered" style="color: #666;"></i> Recently Finished</div>';
+            regularFinished.forEach(function(t) {
+                html += '<div class="tournament-card finished" onclick="viewResults(\'' + t.id + '\')" style="border-left-color: ' + t.color + ';">';
+                html += '<div class="tournament-name">' + t.name + '</div>';
+                html += '<div class="tournament-meta">';
+                html += '<span class="time-control">' + t.time_control + '</span>';
+                html += '<span class="player-count"><i class="fas fa-user"></i> ' + t.player_count + '</span>';
+                html += '</div></div>';
+            });
+            html += '</div>';
+        }
+        
+        // Row 4: Admin Tournaments (black glow, black crown, white aura on name)
+        // Also include scheduled admin tournaments
+        var scheduledAdminTournaments = scheduledTournaments.filter(function(t) { return t.admin_only; });
+        var allAdminTournaments = adminTournaments.concat(scheduledAdminTournaments);
+        if (allAdminTournaments.length > 0) {
+            html += '<div class="tournament-row admin-row">';
+            html += '<div class="row-label"><i class="fas fa-crown" style="color: #1a1a1a; text-shadow: 0 0 8px rgba(255,255,255,0.9);"></i> Admin Tournaments</div>';
+            allAdminTournaments.forEach(function(t) {
+                var isLive = t.currentStatus === 'active';
+                html += '<div class="tournament-card type-admin ' + (isLive ? 'live' : 'scheduled') + '" onclick="handleTournamentClick(\'' + t.id + '\', ' + t.joined + ')">';
+                html += '<div class="tournament-time">' + (isLive ? 'Started at ' : '') + formatEasternTime(t.start_time) + '</div>';
+                html += '<div class="tournament-name admin-name-aura">';
+                html += '<span class="admin-crown"><i class="fas fa-crown"></i></span>';
+                html += t.name;
+                if (t.joined) html += ' <span class="joined-badge">JOINED</span>';
+                html += ' <span class="status-badge ' + (isLive ? 'live' : 'starting') + '" style="background: #1a1a1a;">' + (isLive ? 'LIVE' : 'SOON') + '</span></div>';
+                html += '<div class="tournament-meta">';
+                html += '<span class="time-control">' + t.time_control + '</span>';
+                html += '<span class="player-count"><i class="fas fa-user"></i> ' + t.player_count + '</span>';
+                if (isLive) {
+                    html += '<span class="countdown admin-countdown">' + formatTime(t.timeRemaining) + ' left</span>';
+                } else {
+                    var timeDisplay = t.timeRemaining > 24 * 60 * 60 * 1000 ? formatRelativeStart(t.timeRemaining) : 'in ' + formatTime(t.timeRemaining);
+                    html += '<span class="countdown admin-countdown">' + timeDisplay + '</span>';
+                }
+                html += '</div></div>';
+            });
+            html += '</div>';
+        }
+        
+        // Finished tournaments already shown in Row 3
+        if (finishedTournaments.length > 0 && false) {
+            html += '<div class="tournament-row">';
+            html += '<div class="row-label"><i class="fas fa-flag-checkered" style="color: #666;"></i> Recently Finished</div>';
+            finishedTournaments.forEach(function(t) {
+                html += '<div class="tournament-card finished" onclick="viewResults(\'' + t.id + '\')" style="border-left-color: ' + t.color + ';">';
+                html += '<div class="tournament-name">' + t.name + '</div>';
+                html += '<div class="tournament-meta">';
+                html += '<span class="time-control">' + t.time_control + '</span>';
+                html += '<span class="player-count"><i class="fas fa-user"></i> ' + t.player_count + '</span>';
+                html += '</div></div>';
+            });
+            html += '</div>';
+        }
+        
+        if (tournamentsData.length === 0) {
+            html += '<div class="no-tournaments">';
+            html += '<h3><i class="fas fa-trophy"></i> No Active Tournaments</h3>';
+            html += '<p>Tournaments are automatically created throughout the day.</p>';
+            html += '</div>';
+        }
+        
+        container.innerHTML = html;
+    }
+    
+    initTimeline();
+    setupHorizontalScroll();
+    renderTournamentCards();
+    setInterval(renderTournamentCards, 1000);
+    setInterval(updateTimelineTimers, 1000);
+    setupSocketEvents();
+    
+    window.addEventListener('resize', function() {
+        initTimeline();
+    });
+    
+    document.addEventListener('visibilitychange', function() {
+        if (!document.hidden) {
+            initTimeline();
+            updateCountdowns();
+        }
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,65 @@
+
+{% extends "base.html" %}
+
+{% block title %}MillELO.com - Home{% endblock %}
+
+{% block content %}
+<div style="text-align: center; padding: 60px 0;">
+    <h1 style="font-size: 48px; margin-bottom: 20px; color: #f0d060;">
+        <i class="fas fa-chess-board"></i> MillELO.com
+    </h1>
+    <p style="font-size: 20px; margin-bottom: 40px; opacity: 0.8;">
+        Play Nine Men's Morris online against players from around the world
+    </p>
+    
+    <div class="grid grid-2" style="max-width: 600px; margin: 0 auto;">
+        <div class="card" style="text-align: left;">
+            <h3><i class="fas fa-user-plus"></i> New Player?</h3>
+            <p style="margin: 15px 0;">Create an account and start playing Nine Men's Morris against other players online.</p>
+            <a href="{{ url_for('signup') }}" class="btn">Sign Up</a>
+        </div>
+        
+        <div class="card" style="text-align: left;">
+            <h3><i class="fas fa-sign-in-alt"></i> Existing Player?</h3>
+            <p style="margin: 15px 0;">Log into your account and continue where you left off.</p>
+            <a href="{{ url_for('login') }}" class="btn">Login</a>
+        </div>
+    </div>
+    
+    <div style="margin-top: 60px;">
+        <h2 style="margin-bottom: 30px;">Features</h2>
+        <div class="grid grid-3">
+            <div class="card" style="text-align: center;">
+                <i class="fas fa-users" style="font-size: 30px; color: #3893e8; margin-bottom: 15px;"></i>
+                <h4>Online Multiplayer</h4>
+                <p>Play against players from around the world in real-time</p>
+            </div>
+            <div class="card" style="text-align: center;">
+                <i class="fas fa-trophy" style="font-size: 30px; color: #f0d060; margin-bottom: 15px;"></i>
+                <h4>Rating System</h4>
+                <p>Progress through different titles from I to V</p>
+            </div>
+            <div class="card" style="text-align: center;">
+                <i class="fas fa-chart-line" style="font-size: 30px; color: #28a745; margin-bottom: 15px;"></i>
+                <h4>Game Analysis</h4>
+                <p>Analyze your games and improve your play</p>
+            </div>
+            <div class="card" style="text-align: center;">
+                <i class="fas fa-clock" style="font-size: 30px; color: #ff6b35; margin-bottom: 15px;"></i>
+                <h4>Multiple Time Controls</h4>
+                <p>Bullet and Blitz games with separate ratings</p>
+            </div>
+            <div class="card" style="text-align: center;">
+                <i class="fas fa-medal" style="font-size: 30px; color: #9C27B0; margin-bottom: 15px;"></i>
+                <h4>Tournaments</h4>
+                <p>Daily, Weekly, Monthly, and Marathon tournaments</p>
+            </div>
+            <div class="card" style="text-align: center;">
+                <i class="fas fa-globe" style="font-size: 30px; color: #FFD700; margin-bottom: 15px;"></i>
+                <h4>Special Prizes</h4>
+                <p>Win globes and trophies in marathon tournaments</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

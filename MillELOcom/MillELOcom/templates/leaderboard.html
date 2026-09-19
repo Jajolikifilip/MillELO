@@ -1,0 +1,372 @@
+{% extends "base.html" %}
+
+{% block title %}Leaderboards - MillELO{% endblock %}
+
+{% block content %}
+<div class="leaderboard-page">
+    <div class="leaderboard-header">
+        <h1><i class="fas fa-trophy"></i> Leaderboards</h1>
+        <p>Top players ranked by ELO rating</p>
+    </div>
+    
+    <div class="leaderboard-tabs">
+        <button id="tab-bullet" class="tab-btn active" onclick="switchTab('bullet')">
+            <i class="fas fa-bolt"></i> Bullet
+        </button>
+        <button id="tab-blitz" class="tab-btn" onclick="switchTab('blitz')">
+            <i class="fas fa-fire"></i> Blitz
+        </button>
+    </div>
+    
+    <div class="leaderboard-container">
+        <div class="leaderboard-table-wrapper">
+            <table class="leaderboard-table">
+                <thead>
+                    <tr>
+                        <th class="rank-col">#</th>
+                        <th class="player-col">Player</th>
+                        <th class="rating-col">Rating</th>
+                        <th class="games-col">Games</th>
+                        <th class="wins-col">W</th>
+                        <th class="losses-col">L</th>
+                        <th class="draws-col">D</th>
+                        <th class="winrate-col">Win %</th>
+                    </tr>
+                </thead>
+                <tbody id="leaderboard-body">
+                    <tr>
+                        <td colspan="8" style="text-align: center; padding: 40px;">
+                            <i class="fas fa-spinner fa-spin"></i> Loading...
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <div class="back-btn-container">
+        <a href="{{ url_for('home') }}" class="btn"><i class="fas fa-arrow-left"></i> Back to Lobby</a>
+    </div>
+</div>
+
+<style>
+.leaderboard-page {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.leaderboard-header {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.leaderboard-header h1 {
+    font-size: 32px;
+    margin-bottom: 10px;
+    color: #fff;
+}
+
+.leaderboard-header h1 i {
+    color: #f1c40f;
+}
+
+.leaderboard-header p {
+    color: #888;
+    font-size: 16px;
+}
+
+.leaderboard-tabs {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.tab-btn {
+    padding: 12px 30px;
+    font-size: 16px;
+    border: none;
+    border-radius: 8px;
+    background: #333;
+    color: #888;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.tab-btn:hover {
+    background: #444;
+    color: #fff;
+}
+
+.tab-btn.active {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: #fff;
+}
+
+.tab-btn i {
+    margin-right: 8px;
+}
+
+#tab-bullet.active {
+    background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
+}
+
+#tab-blitz.active {
+    background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+}
+
+.leaderboard-container {
+    background: #1e1e1e;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+}
+
+.leaderboard-table-wrapper {
+    overflow-x: auto;
+}
+
+.leaderboard-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.leaderboard-table th {
+    background: #252525;
+    padding: 15px 12px;
+    text-align: left;
+    font-weight: 600;
+    color: #888;
+    text-transform: uppercase;
+    font-size: 12px;
+    letter-spacing: 0.5px;
+    border-bottom: 2px solid #333;
+}
+
+.leaderboard-table td {
+    padding: 12px;
+    border-bottom: 1px solid #2a2a2a;
+}
+
+.leaderboard-table tbody tr:hover {
+    background: #252525;
+}
+
+.rank-col { width: 60px; text-align: center; }
+.player-col { min-width: 200px; }
+.rating-col { width: 100px; text-align: center; }
+.games-col { width: 80px; text-align: center; }
+.wins-col { width: 60px; text-align: center; color: #27ae60; }
+.losses-col { width: 60px; text-align: center; color: #e74c3c; }
+.draws-col { width: 60px; text-align: center; color: #888; }
+.winrate-col { width: 80px; text-align: center; }
+
+.rank-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    font-weight: bold;
+    font-size: 14px;
+}
+
+.rank-1 { background: linear-gradient(135deg, #f1c40f, #f39c12); color: #000; }
+.rank-2 { background: linear-gradient(135deg, #bdc3c7, #95a5a6); color: #000; }
+.rank-3 { background: linear-gradient(135deg, #cd7f32, #a0522d); color: #fff; }
+.rank-default { background: #333; color: #888; }
+
+.player-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.player-title {
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: bold;
+}
+
+.player-name {
+    font-weight: 500;
+    text-decoration: none;
+    transition: color 0.2s;
+}
+
+.player-name:hover {
+    text-decoration: underline;
+}
+
+.online-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.online-dot.online { background: #27ae60; box-shadow: 0 0 4px #27ae60; }
+.online-dot.offline { background: #8b4513; }
+
+.rating-value {
+    font-weight: bold;
+    font-size: 16px;
+}
+
+.winrate-bar {
+    height: 6px;
+    background: #333;
+    border-radius: 3px;
+    overflow: hidden;
+    margin-top: 4px;
+}
+
+.winrate-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #27ae60, #2ecc71);
+    border-radius: 3px;
+}
+
+.back-btn-container {
+    margin-top: 30px;
+    text-align: center;
+}
+
+@media (max-width: 768px) {
+    .leaderboard-page {
+        padding: 10px;
+    }
+    
+    .leaderboard-header h1 {
+        font-size: 24px;
+    }
+    
+    .tab-btn {
+        padding: 10px 20px;
+        font-size: 14px;
+    }
+    
+    .leaderboard-table th,
+    .leaderboard-table td {
+        padding: 8px 6px;
+        font-size: 13px;
+    }
+    
+    .games-col, .draws-col, .winrate-col {
+        display: none;
+    }
+}
+</style>
+
+<script>
+var currentTab = 'bullet';
+var onlineUsersSet = new Set();
+
+fetch('/api/online_users')
+    .then(function(r) { return r.json(); })
+    .then(function(users) { users.forEach(function(u) { onlineUsersSet.add(u); }); });
+
+if (window.socket) {
+    window.socket.on('user_online_status', function(data) {
+        if (data.online) {
+            onlineUsersSet.add(data.username);
+        } else {
+            onlineUsersSet.delete(data.username);
+        }
+        var dot = document.querySelector('.online-dot[data-user="' + data.username + '"]');
+        if (dot) {
+            dot.className = 'online-dot ' + (data.online ? 'online' : 'offline');
+        }
+    });
+}
+
+function switchTab(type) {
+    currentTab = type;
+    document.querySelectorAll('.tab-btn').forEach(function(btn) {
+        btn.classList.remove('active');
+    });
+    document.getElementById('tab-' + type).classList.add('active');
+    loadLeaderboard(type);
+}
+
+function loadLeaderboard(type) {
+    var tbody = document.getElementById('leaderboard-body');
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 40px;"><i class="fas fa-spinner fa-spin"></i> Loading...</td></tr>';
+    
+    fetch('/api/leaderboard/' + type)
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 40px; color: #888;">No players yet</td></tr>';
+                return;
+            }
+            
+            tbody.innerHTML = data.map(function(player, index) {
+                var rank = index + 1;
+                var rankClass = rank <= 3 ? 'rank-' + rank : 'rank-default';
+                var isOnline = onlineUsersSet.has(player.username);
+                var winRate = player.games_played > 0 ? Math.round((player.wins / player.games_played) * 100) : 0;
+                
+                var titleHtml = '';
+                if (player.title) {
+                    titleHtml = '<span class="player-title" style="background: ' + player.title_color + ';">' + player.title + '</span>';
+                }
+                
+                // Ranking badges are now only shown on profile page
+                
+                var adminCrownHtml = '';
+                var adminNameStyle = '';
+                if (player.admin_rank === 'admin') {
+                    adminCrownHtml = '<i class="fas fa-crown" style="color: #1a1a1a; text-shadow: 0 0 2px #fff, 0 0 4px #fff, 0 0 15px rgba(0,0,0,0.95), 0 0 25px rgba(0,0,0,0.85), 0 0 40px rgba(0,0,0,0.7); font-size: 11px; margin-right: 4px;"></i>';
+                    adminNameStyle = 'text-shadow: 0 0 15px rgba(0,0,0,1), 0 0 25px rgba(0,0,0,0.9), 0 0 40px rgba(0,0,0,0.8);';
+                } else if (player.admin_rank === 'dragon') {
+                    adminCrownHtml = '<i class="fas fa-dragon" style="color: #FFD700; text-shadow: 0 0 10px #FF8C00, 0 0 20px #FF4500, 0 0 30px #FF6600; font-size: 11px; margin-right: 4px;"></i>';
+                    adminNameStyle = 'text-shadow: 0 0 8px #FFD700, 0 0 12px #FFD700, 0 0 18px #FF8C00, 0 0 25px #FF8C00;';
+                } else if (player.admin_rank === 'galaxy') {
+                    adminCrownHtml = '<span class="galaxy-black-hole galaxy-black-hole-sm" style="margin-right: 4px;"></span>';
+                    adminNameStyle = 'text-shadow: 0 0 8px #9400D3, 0 0 15px #8A2BE2, 0 0 25px #4B0082, 0 0 35px #9400D3;';
+                } else if (player.admin_rank === 'creator') {
+                    adminCrownHtml = '';
+                    adminNameStyle = '';
+                }
+                
+                var nameHtml;
+                if (player.admin_rank === 'creator') {
+                    nameHtml = '<span class="creator-cloud-aura creator-cloud-aura-sm">' + player.username + '</span>';
+                } else {
+                    nameHtml = '<a href="/profile/' + encodeURIComponent(player.username) + '" class="player-name" style="color: ' + player.color + '; ' + adminNameStyle + '">' + player.username + '</a>';
+                }
+                
+                return '<tr>' +
+                    '<td class="rank-col"><span class="rank-badge ' + rankClass + '">' + rank + '</span></td>' +
+                    '<td class="player-col">' +
+                        '<div class="player-info">' +
+                            '<span class="online-dot ' + (isOnline ? 'online' : 'offline') + '" data-user="' + player.username + '"></span>' +
+                            titleHtml +
+                            adminCrownHtml +
+                            (player.admin_rank === 'creator' ? '<a href="/profile/' + encodeURIComponent(player.username) + '" style="text-decoration: none;">' + nameHtml + '</a>' : nameHtml) +
+                        '</div>' +
+                    '</td>' +
+                    '<td class="rating-col"><span class="rating-value">' + player.rating + '</span></td>' +
+                    '<td class="games-col">' + player.games_played + '</td>' +
+                    '<td class="wins-col">' + player.wins + '</td>' +
+                    '<td class="losses-col">' + player.losses + '</td>' +
+                    '<td class="draws-col">' + player.draws + '</td>' +
+                    '<td class="winrate-col">' +
+                        '<div>' + winRate + '%</div>' +
+                        '<div class="winrate-bar"><div class="winrate-fill" style="width: ' + winRate + '%;"></div></div>' +
+                    '</td>' +
+                '</tr>';
+            }).join('');
+        })
+        .catch(function(err) {
+            tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 40px; color: #e74c3c;">Error loading leaderboard</td></tr>';
+        });
+}
+
+loadLeaderboard('bullet');
+</script>
+{% endblock %}

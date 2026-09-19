@@ -1,0 +1,3375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="MillELO.com - Play Nine Men's Morris online! Free real-time multiplayer with ELO ratings, tournaments, and leaderboards. Challenge players worldwide in Bullet and Blitz time controls.">
+    <meta name="keywords" content="MillELO, Nine Men's Morris, Mill game, online board game, ELO rating, multiplayer, tournaments, strategy game, mill online, nine mens morris online">
+    <meta name="author" content="MillELO.com">
+    <meta name="robots" content="index, follow">
+    <meta name="theme-color" content="#1a1a2e">
+    <meta name="msapplication-TileColor" content="#1a1a2e">
+    <meta name="msapplication-TileImage" content="{{ url_for('static', filename='logo.png') }}">
+    <meta name="application-name" content="MillELO">
+    <meta property="og:title" content="{% block og_title %}MillELO.com - Play Nine Men's Morris Online{% endblock %}">
+    <meta property="og:description" content="Play Nine Men's Morris online with real-time multiplayer, ELO ratings, and tournaments. Challenge players worldwide!">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="MillELO.com">
+    <meta property="og:image" content="{{ url_for('static', filename='logo.png', _external=True) }}">
+    <meta property="og:image:width" content="1024">
+    <meta property="og:image:height" content="1024">
+    <meta property="og:image:alt" content="MillELO - Nine Men's Morris Online Game">
+    <meta property="og:url" content="https://millelo.com/">
+    <meta property="og:locale" content="en_US">
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="MillELO.com - Play Nine Men's Morris Online">
+    <meta name="twitter:description" content="Play Nine Men's Morris online with real-time multiplayer, ELO ratings, and tournaments.">
+    <meta name="twitter:image" content="{{ url_for('static', filename='logo.png', _external=True) }}">
+    <link rel="canonical" href="https://millelo.com/">
+    <title>{% block title %}MillELO.com - Play Nine Men's Morris Online{% endblock %}</title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="icon" type="image/png" sizes="48x48" href="{{ url_for('static', filename='logo.png') }}">
+    <link rel="icon" type="image/png" sizes="192x192" href="{{ url_for('static', filename='logo.png') }}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='logo.png') }}">
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "name": "MillELO",
+        "alternateName": ["MillELO.com", "Millelo", "millelo", "Mill ELO", "milelo"],
+        "url": "https://millelo.com/",
+        "description": "Play Nine Men's Morris online with real-time multiplayer, ELO ratings, and tournaments.",
+        "potentialAction": {
+            "@type": "SearchAction",
+            "target": "https://millelo.com/leaderboard?q={search_term_string}",
+            "query-input": "required name=search_term_string"
+        }
+    }
+    </script>
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "MillELO",
+        "alternateName": ["Millelo", "millelo", "milelo", "Mill ELO"],
+        "url": "https://millelo.com/",
+        "applicationCategory": "GameApplication",
+        "operatingSystem": "Web Browser",
+        "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "USD"
+        },
+        "description": "Free online Nine Men's Morris game with ELO ratings, tournaments, and real-time multiplayer."
+    }
+    </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        /* Galaxy Black Hole Animation */
+        @keyframes blackHoleVortex {
+            0% { transform: rotate(0deg) scale(1); }
+            25% { transform: rotate(90deg) scale(1.05); }
+            50% { transform: rotate(180deg) scale(1); }
+            75% { transform: rotate(270deg) scale(0.95); }
+            100% { transform: rotate(360deg) scale(1); }
+        }
+        
+        @keyframes accretionDiskPulse {
+            0%, 100% { 
+                box-shadow: 0 0 3px #9400D3, 0 0 6px #8A2BE2, 0 0 10px #4B0082, 
+                            inset 0 0 3px rgba(148,0,211,0.5);
+            }
+            50% { 
+                box-shadow: 0 0 5px #9400D3, 0 0 10px #8A2BE2, 0 0 15px #4B0082, 0 0 20px #9400D3,
+                            inset 0 0 5px rgba(148,0,211,0.8);
+            }
+        }
+        
+        .galaxy-black-hole {
+            display: inline-block;
+            position: relative;
+            width: 1em;
+            height: 1em;
+            border-radius: 50%;
+            background: radial-gradient(circle at center, #000 30%, #1a0033 50%, #4B0082 70%, #8A2BE2 90%);
+            animation: blackHoleVortex 4s linear infinite, accretionDiskPulse 2s ease-in-out infinite;
+            box-shadow: 0 0 5px #9400D3, 0 0 10px #8A2BE2, 0 0 15px #4B0082;
+        }
+        
+        .galaxy-black-hole::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 40%;
+            height: 40%;
+            background: #000;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            box-shadow: 0 0 5px #000, 0 0 10px rgba(0,0,0,0.8);
+        }
+        
+        .galaxy-black-hole::after {
+            content: '';
+            position: absolute;
+            top: -20%;
+            left: -20%;
+            width: 140%;
+            height: 140%;
+            border-radius: 50%;
+            border: 1px solid rgba(148,0,211,0.3);
+            animation: blackHoleVortex 6s linear infinite reverse;
+        }
+        
+        .galaxy-black-hole-sm { font-size: 12px; }
+        .galaxy-black-hole-md { font-size: 14px; }
+        .galaxy-black-hole-lg { font-size: 18px; }
+
+        /* Creator Japanese/Chinese Golden Cloud Aura (祥云/雲) - SVG cloud shape with animation */
+        @keyframes cloudFloat {
+            0%, 100% { transform: translateY(0) scale(1); }
+            25% { transform: translateY(-2px) scale(1.02); }
+            50% { transform: translateY(0) scale(1); }
+            75% { transform: translateY(1px) scale(0.99); }
+        }
+        @keyframes cloudBreath {
+            0%, 100% { filter: drop-shadow(0 0 3px rgba(232, 185, 35, 0.5)); }
+            50% { filter: drop-shadow(0 0 8px rgba(232, 185, 35, 0.8)); }
+        }
+        
+        .creator-cloud-aura {
+            display: inline-block;
+            position: relative;
+            padding: 10px 22px;
+            color: #000 !important;
+            font-weight: bold;
+            font-size: 15px;
+            background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 55'%3E%3Cpath d='M8 28 Q2 28 4 16 Q7 4 18 10 Q26 2 38 7 Q48 1 58 7 Q68 2 78 10 Q88 4 94 16 Q99 28 92 28 Q99 40 94 48 Q84 55 70 50 Q55 58 40 50 Q25 55 10 48 Q2 40 8 28 Z' fill='%23E8B923' stroke='%23000' stroke-width='2.5'/%3E%3Cpath d='M22 20 Q32 15 42 20 Q48 17 55 20' fill='none' stroke='%23000' stroke-width='1' opacity='0.35'/%3E%3Cpath d='M48 18 Q58 13 70 18' fill='none' stroke='%23000' stroke-width='1' opacity='0.35'/%3E%3Cpath d='M25 32 Q40 26 55 32 Q65 28 75 32' fill='none' stroke='%23000' stroke-width='1' opacity='0.35'/%3E%3Cpath d='M18 40 Q30 35 42 40' fill='none' stroke='%23000' stroke-width='1' opacity='0.3'/%3E%3C/svg%3E") no-repeat center center;
+            background-size: 100% 100%;
+            min-width: 80px;
+            min-height: 44px;
+            text-align: center;
+            line-height: 1.6;
+            z-index: 1;
+            animation: cloudFloat 3s ease-in-out infinite, cloudBreath 2.5s ease-in-out infinite;
+        }
+        
+        /* Small size variant */
+        .creator-cloud-aura-sm {
+            padding: 6px 16px;
+            font-size: 13px;
+            min-width: 65px;
+            min-height: 34px;
+        }
+        
+        /* Medium size variant */
+        .creator-cloud-aura-md {
+            padding: 8px 18px;
+            font-size: 14px;
+            min-width: 70px;
+            min-height: 38px;
+        }
+        
+        /* Large size variant */
+        .creator-cloud-aura-lg {
+            padding: 12px 26px;
+            font-size: 18px;
+            min-width: 90px;
+            min-height: 50px;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d30 100%);
+            color: #c9c9c9;
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+
+        .header {
+            background: rgba(22, 21, 18, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 12px 0;
+            border-bottom: 2px solid #3c3c3c;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        @media (max-width: 768px) {
+            .header {
+                padding: 8px 0;
+            }
+        }
+
+        .nav {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 20px;
+        }
+
+        .logo {
+            font-size: 28px;
+            font-weight: bold;
+            background: linear-gradient(45deg, #f0d060, #ff6b35);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-decoration: none;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 30px;
+            align-items: center;
+        }
+
+        .nav-links a {
+            color: #c9c9c9;
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.3s ease;
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+        }
+        
+        .nav-links a i {
+            vertical-align: middle;
+        }
+
+        .nav-links a:hover {
+            color: #f0d060;
+        }
+
+        .nav-links a::after {
+            content: '';
+            position: absolute;
+            width: 0;
+            height: 2px;
+            bottom: -5px;
+            left: 0;
+            background: #f0d060;
+            transition: width 0.3s ease;
+        }
+
+        .nav-links a:hover::after {
+            width: 100%;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .user-name {
+            font-weight: 600;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #f0d060, #ff6b35);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(240, 208, 96, 0.3);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        .card {
+            background: rgba(44, 42, 38, 0.8);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 30px;
+            border: 1px solid #3c3c3c;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        .card h3 {
+            color: #f0d060;
+            margin-bottom: 20px;
+            font-size: 24px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .grid {
+            display: grid;
+            gap: 30px;
+        }
+
+        .grid-2 {
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        }
+
+        .grid-3 {
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        }
+
+        .online-count {
+            background: #27ae60;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        @media (max-width: 768px) {
+            .nav {
+                flex-direction: column;
+                gap: 20px;
+            }
+
+            .nav-links {
+                gap: 20px;
+            }
+
+            .container {
+                padding: 20px 10px;
+            }
+
+            .card {
+                padding: 20px;
+            }
+
+            .grid-2, .grid-3 {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .flash-messages {
+            margin: 20px 0;
+        }
+
+        .flash-message {
+            background: #e74c3c;
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+        }
+
+        /* Form Styles */
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #f0d060;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px 15px;
+            background: rgba(22, 21, 18, 0.8);
+            border: 2px solid #3c3c3c;
+            border-radius: 8px;
+            color: #c9c9c9;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            box-sizing: border-box;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #f0d060;
+            box-shadow: 0 0 0 3px rgba(240, 208, 96, 0.1);
+        }
+
+        .form-group input::placeholder {
+            color: #666;
+        }
+
+        /* Button Variants */
+        .btn-secondary {
+            background: linear-gradient(135deg, #6c757d, #495057);
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: linear-gradient(135deg, #5a6268, #3d4449);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(108, 117, 125, 0.3);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #dc3545, #c82333);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: linear-gradient(135deg, #c82333, #a71e2a);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(220, 53, 69, 0.3);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #28a745, #20c997);
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: linear-gradient(135deg, #20c997, #17a2b8);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(40, 167, 69, 0.3);
+        }
+
+        .btn-info {
+            background: linear-gradient(135deg, #17a2b8, #138496);
+            color: white;
+        }
+
+        .btn-info:hover {
+            background: linear-gradient(135deg, #138496, #117a8b);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(23, 162, 184, 0.3);
+        }
+
+        /* Auth Form Specific Styles */
+        .auth-card {
+            background: rgba(44, 42, 38, 0.95);
+            backdrop-filter: blur(15px);
+            border-radius: 16px;
+            padding: 40px;
+            border: 1px solid #3c3c3c;
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+            max-width: 400px;
+            margin: 60px auto;
+        }
+
+        .auth-title {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #f0d060;
+            font-size: 28px;
+            font-weight: bold;
+        }
+
+        .auth-links {
+            text-align: center;
+            margin-top: 25px;
+            color: #999;
+        }
+
+        .auth-links a {
+            color: #3893e8;
+            text-decoration: none;
+            font-weight: 600;
+            transition: color 0.3s ease;
+        }
+
+        .auth-links a:hover {
+            color: #4da3f0;
+            text-decoration: underline;
+        }
+
+        /* Mobile responsive CSS - optimized for vertical fit */
+        @media (max-width: 768px) {
+            html, body {
+                overflow-x: hidden;
+                overflow-y: auto;
+                font-size: 14px;
+            }
+
+            .header {
+                padding: 6px 0;
+            }
+
+            .container {
+                padding: 15px 10px;
+                max-width: 100vw;
+            }
+
+            /* Mobile Navigation - Two rows layout */
+            .nav {
+                padding: 0 10px;
+                flex-direction: row;
+                flex-wrap: wrap;
+                justify-content: space-between;
+                align-items: center;
+                gap: 4px;
+            }
+
+            .nav-links {
+                display: contents;
+            }
+
+            .user-info {
+                display: contents;
+            }
+
+            /* Row 1: Logo left, Profile center-right bigger */
+            .logo {
+                font-size: 20px;
+                flex-shrink: 0;
+                order: 1;
+            }
+
+            /* Profile link - center area, bigger */
+            .profile-link {
+                order: 2;
+                font-size: 13px !important;
+                padding: 6px 10px !important;
+                max-width: none !important;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+                display: inline-block !important;
+                border: none;
+                margin: 0;
+                margin-left: auto;
+                margin-right: 10px;
+            }
+
+            /* Online count - hidden on mobile to save space */
+            .online-count {
+                display: none;
+            }
+
+            /* Row 2: Search, Notifications, Hamburger */
+            /* Hamburger button */
+            .hamburger-btn {
+                order: 5;
+                font-size: 18px;
+                padding: 8px 10px;
+                margin: 0;
+            }
+
+            /* Search icon */
+            .mobile-search-icon {
+                order: 3;
+                padding: 8px !important;
+            }
+
+            .mobile-search-icon i {
+                font-size: 18px !important;
+            }
+
+            /* Notification bell */
+            .notification-bell {
+                order: 4;
+            }
+
+            .notification-bell i {
+                font-size: 18px;
+            }
+
+            .notification-count {
+                font-size: 8px;
+                padding: 2px 5px;
+                top: -6px;
+                right: -6px;
+            }
+
+            .notification-dropdown {
+                width: 220px;
+                font-size: 11px;
+                right: -60px;
+            }
+
+            /* Second row container for controls */
+            .mobile-controls-row {
+                order: 10;
+                width: 100%;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                gap: 15px;
+                padding: 6px 0;
+                border-top: 1px solid rgba(60, 60, 60, 0.5);
+                margin-top: 2px;
+            }
+
+            /* Hide desktop search on mobile */
+            .desktop-search {
+                display: none !important;
+            }
+
+            /* Card styling */
+            .card {
+                padding: 20px 15px;
+                margin-bottom: 15px;
+            }
+
+            .card h3 {
+                font-size: 18px;
+                margin-bottom: 15px;
+            }
+
+            /* Grid adjustments */
+            .grid-2 {
+                grid-template-columns: 1fr 1fr;
+                gap: 15px;
+            }
+
+            .grid-3 {
+                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                gap: 15px;
+            }
+
+            /* Button adjustments */
+            .btn {
+                font-size: 12px;
+                padding: 8px 12px;
+                border-radius: 6px;
+            }
+
+            /* Typography scaling */
+            h1 { font-size: 24px; }
+            h2 { font-size: 20px; }
+            h3 { font-size: 16px; }
+            h4 { font-size: 14px; }
+            p, div { font-size: 13px; }
+
+            /* Form elements */
+            .form-group input {
+                font-size: 13px;
+                padding: 8px 10px;
+            }
+
+            .form-group label {
+                font-size: 13px;
+            }
+
+            /* Auth pages */
+            .auth-card {
+                padding: 25px 20px;
+                margin: 40px auto;
+            }
+
+            .auth-title {
+                font-size: 22px;
+            }
+        }
+
+        /* Mobile Search Overlay Styles */
+        .mobile-search-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            z-index: 9999;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            padding-top: 80px;
+        }
+
+        .mobile-search-overlay.active {
+            display: flex;
+        }
+
+        .mobile-search-input {
+            width: 90%;
+            max-width: 400px;
+            padding: 15px 20px;
+            font-size: 18px;
+            background: rgba(44, 42, 38, 0.9);
+            border: 2px solid #f0d060;
+            border-radius: 12px;
+            color: #c9c9c9;
+            outline: none;
+            margin-bottom: 20px;
+        }
+
+        .mobile-search-input::placeholder {
+            color: #999;
+        }
+
+        .mobile-search-results {
+            width: 90%;
+            max-width: 400px;
+            max-height: 60vh;
+            overflow-y: auto;
+            background: rgba(44, 42, 38, 0.95);
+            border-radius: 8px;
+            border: 1px solid #3c3c3c;
+        }
+
+        .mobile-search-close {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: none;
+            border: none;
+            color: #f0d060;
+            font-size: 24px;
+            cursor: pointer;
+            padding: 10px;
+        }
+
+        /* Hide desktop search on mobile */
+        @media (max-width: 768px) {
+            .desktop-search {
+                display: none !important;
+            }
+
+            .mobile-search-icon {
+                display: block !important;
+            }
+
+            .search-container {
+                margin-right: 4px !important;
+            }
+        }
+
+        /* Extra small devices */
+        @media (max-width: 480px) {
+            .grid-2 {
+                grid-template-columns: 1fr;
+            }
+
+            .header {
+                padding: 4px 0;
+            }
+
+            .nav {
+                padding: 0 6px;
+                gap: 3px;
+            }
+
+            .logo {
+                font-size: 18px;
+            }
+
+            .profile-link {
+                font-size: 11px !important;
+                margin-right: 6px;
+            }
+
+            .hamburger-btn {
+                font-size: 16px;
+                padding: 6px 8px;
+            }
+
+            .mobile-search-icon i {
+                font-size: 16px !important;
+            }
+
+            .notification-bell i {
+                font-size: 16px;
+            }
+
+            .card {
+                padding: 15px 10px;
+            }
+
+            .btn {
+                font-size: 11px;
+                padding: 6px 10px;
+            }
+
+            .mobile-search-input {
+                font-size: 16px;
+                padding: 12px 16px;
+            }
+        }
+
+        /* Notification Bell Styles */
+        .notification-bell {
+            position: relative;
+            display: inline-block;
+        }
+
+        .notification-bell i {
+            font-size: 20px;
+            color: #f0d060;
+            cursor: pointer;
+        }
+
+        .notification-count {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            background: #dc3545;
+            color: white;
+            border-radius: 50%;
+            padding: 3px 6px;
+            font-size: 12px;
+        }
+
+        .notification-dropdown {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            background: rgba(44, 42, 38, 0.95);
+            border: 1px solid #3c3c3c;
+            border-radius: 8px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+            width: 300px;
+            max-height: 400px;
+            overflow-y: auto;
+            z-index: 1002;
+            display: none;
+        }
+
+        .notification-dropdown.show {
+            display: block;
+        }
+
+        .notification-item {
+            padding: 10px;
+            border-bottom: 1px solid #3c3c3c;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .notification-item:last-child {
+            border-bottom: none;
+        }
+
+        .notification-item:hover {
+            background: rgba(240, 208, 96, 0.1);
+        }
+
+        .notification-item .message {
+            color: #c9c9c9;
+        }
+
+        .notification-item .time {
+            font-size: 12px;
+            color: #999;
+        }
+
+        /* Mobile Hamburger Menu Styles */
+        .hamburger-btn {
+            display: none;
+            background: none;
+            border: none;
+            color: #f0d060;
+            font-size: 20px;
+            cursor: pointer;
+            padding: 8px;
+            margin-right: 8px;
+        }
+
+        .hamburger-btn:hover {
+            color: #fff;
+        }
+
+        .mobile-menu-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            z-index: 1998;
+        }
+
+        .mobile-menu-overlay.active {
+            display: block;
+        }
+
+        .mobile-menu {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 220px;
+            max-width: 70vw;
+            height: auto;
+            max-height: 100%;
+            background: #2a2a2a;
+            background-color: #2a2a2a;
+            z-index: 1999;
+            transform: translateX(-100%);
+            transition: transform 0.3s ease;
+            box-shadow: 4px 0 20px rgba(0, 0, 0, 0.8);
+            border-radius: 0 12px 12px 0;
+            border: 1px solid #444;
+        }
+
+        .mobile-menu.active {
+            transform: translateX(0);
+        }
+
+        .mobile-menu-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 15px;
+            border-bottom: 1px solid #444;
+            background-color: #2a2a2a;
+            height: 44px;
+            box-sizing: border-box;
+        }
+
+        .mobile-menu-close {
+            background: none;
+            border: none;
+            color: #888;
+            font-size: 24px;
+            cursor: pointer;
+            padding: 0 5px;
+            line-height: 1;
+        }
+
+        .mobile-menu-close:hover {
+            color: #f0d060;
+        }
+
+        .mobile-menu-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 15px;
+            color: #c9c9c9;
+            text-decoration: none;
+            font-size: 15px;
+            border-bottom: 1px solid #444;
+            transition: background 0.15s ease;
+            background-color: #2a2a2a;
+            height: 44px;
+            box-sizing: border-box;
+            width: 100%;
+        }
+
+        .mobile-menu-item:hover {
+            background-color: #3a3a3a;
+            color: #f0d060;
+        }
+
+        .mobile-menu-item i {
+            width: 20px;
+            text-align: center;
+            color: #f0d060;
+            font-size: 16px;
+        }
+
+        .mobile-menu-divider {
+            height: 0;
+            margin: 0;
+            display: none;
+        }
+
+        .mobile-menu-logout {
+            color: #dc3545;
+            background-color: #2a2a2a;
+        }
+
+        .mobile-menu-logout i {
+            color: #dc3545;
+        }
+
+        .mobile-menu-logout:hover {
+            background-color: #3a3a3a;
+            color: #ff6b6b;
+        }
+
+        /* Desktop nav items - visible by default */
+        .desktop-nav-item {
+            display: inline-flex;
+            align-items: center;
+        }
+        
+        /* Navigation icon buttons with black square background */
+        .nav-icon-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 36px;
+            height: 36px;
+            background: rgba(0, 0, 0, 0.6);
+            border-radius: 6px;
+            color: #c9c9c9;
+            text-decoration: none;
+            transition: all 0.2s ease;
+        }
+        
+        .nav-icon-btn:hover {
+            background: rgba(0, 0, 0, 0.8);
+            color: #f0d060;
+        }
+        
+        .nav-icon-btn i {
+            font-size: 16px;
+        }
+
+        /* Mobile responsiveness for hamburger menu */
+        @media (max-width: 768px) {
+            .hamburger-btn {
+                display: block;
+            }
+
+            .desktop-nav-item {
+                display: none !important;
+            }
+
+            .mobile-search-icon {
+                display: block !important;
+            }
+        }
+        
+        /* Dragon rank burning effect animation */
+        @keyframes dragonFlame {
+            0% {
+                box-shadow: 0 0 20px rgba(255, 215, 0, 0.6), 0 0 40px rgba(255, 140, 0, 0.4), 0 0 60px rgba(255, 69, 0, 0.3);
+            }
+            100% {
+                box-shadow: 0 0 30px rgba(255, 215, 0, 0.8), 0 0 50px rgba(255, 140, 0, 0.6), 0 0 80px rgba(255, 69, 0, 0.4);
+            }
+        }
+        
+        .dragon-burn {
+            animation: dragonFlame 1.5s ease-in-out infinite alternate;
+            text-shadow: 0 0 10px #FF8C00, 0 0 20px #FF4500, 0 0 30px #FF6600 !important;
+        }
+        
+        .dragon-name-glow {
+            text-shadow: 0 0 8px #FFD700, 0 0 12px #FFD700, 0 0 18px #FF8C00, 0 0 25px #FF8C00, 0 0 20px #FF6600;
+            animation: dragonNameGlow 1.5s ease-in-out infinite alternate;
+        }
+        
+        @keyframes dragonNameGlow {
+            0% {
+                text-shadow: 0 0 8px #FFD700, 0 0 12px #FFD700, 0 0 18px #FF8C00, 0 0 25px #FF8C00;
+            }
+            100% {
+                text-shadow: 0 0 8px #FFD700, 0 0 15px #FF8C00, 0 0 25px #FF4500, 0 0 35px #FF6600;
+            }
+        }
+        
+        /* Galaxy rank cosmic effect animation */
+        @keyframes galaxyPulse {
+            0% {
+                box-shadow: 0 0 15px rgba(138, 43, 226, 0.6), 0 0 30px rgba(75, 0, 130, 0.4), 0 0 45px rgba(148, 0, 211, 0.3), inset 0 0 20px rgba(138, 43, 226, 0.2);
+            }
+            100% {
+                box-shadow: 0 0 25px rgba(138, 43, 226, 0.8), 0 0 45px rgba(75, 0, 130, 0.6), 0 0 65px rgba(148, 0, 211, 0.4), inset 0 0 30px rgba(138, 43, 226, 0.3);
+            }
+        }
+        
+        .galaxy-name-glow {
+            text-shadow: 0 0 8px #9400D3, 0 0 15px #8A2BE2, 0 0 25px #4B0082, 0 0 35px #9400D3;
+            animation: galaxyNameGlow 2s ease-in-out infinite alternate;
+        }
+        
+        @keyframes galaxyNameGlow {
+            0% {
+                text-shadow: 0 0 8px #9400D3, 0 0 15px #8A2BE2, 0 0 25px #4B0082;
+            }
+            100% {
+                text-shadow: 0 0 12px #9400D3, 0 0 20px #8A2BE2, 0 0 35px #4B0082, 0 0 45px #9400D3;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <nav class="nav">
+            <a href="{{ url_for('home') }}" class="logo">
+                <i class="fas fa-chess-board"></i> MillELO
+            </a>
+
+            <div class="nav-links">
+                {% if session.username %}
+                    <!-- Desktop nav items (hidden on mobile) -->
+                    <a href="{{ url_for('friends_page') }}" class="desktop-nav-item nav-icon-btn" title="Friends" style="position: relative;"><i class="fas fa-user-friends"></i><span class="friend-badge" id="friend-badge" style="display: none; position: absolute; top: -5px; right: -5px; background: #e74c3c; color: white; font-size: 10px; padding: 2px 5px; border-radius: 8px; min-width: 16px; text-align: center;"></span></a>
+                    <a href="{{ url_for('home') }}" class="desktop-nav-item nav-icon-btn" title="Lobby"><i class="fas fa-home"></i></a>
+                    <a href="{{ url_for('tournaments_page') }}" class="desktop-nav-item nav-icon-btn" title="Tournaments"><i class="fas fa-trophy"></i></a>
+
+                    <div class="user-info">
+                        <!-- Mobile Hamburger Menu Button -->
+                        <button class="hamburger-btn" onclick="toggleMobileMenu()" aria-label="Menu">
+                            <i class="fas fa-bars"></i>
+                        </button>
+
+                        <!-- Desktop Search Container -->
+                        <div class="search-container desktop-search" style="position: relative; margin-right: 15px;">
+                            <input type="text" id="player-search" placeholder="Search players..." style="padding: 8px 12px; border-radius: 6px; border: 2px solid #3c3c3c; background: rgba(22, 21, 18, 0.8); color: #c9c9c9; width: 200px;">
+                            <div id="search-results" style="position: absolute; top: 100%; left: 0; right: 0; background: rgba(44, 42, 38, 0.95); border: 1px solid #3c3c3c; border-radius: 6px; margin-top: 2px; max-height: 300px; overflow-y: auto; z-index: 1001; display: none;"></div>
+                        </div>
+
+                        <!-- Mobile Search Icon -->
+                        <div class="mobile-search-icon" onclick="openMobileSearch()" style="display: none; cursor: pointer; padding: 8px;">
+                            <i class="fas fa-search" style="color: #f0d060; font-size: 18px;"></i>
+                        </div>
+                        <a href="{{ url_for('profile', username=session.username) }}" class="profile-link" style="color: {{ get_ranking_color(session.username) or users[session.username].color or '#c9c9c9' }}; text-decoration: none; font-weight: 600;">
+                            {% set user_rating = users[session.username].blitz_rating if users[session.username].blitz_rating > users[session.username].bullet_rating else users[session.username].bullet_rating %}
+                            {% set title, title_color = get_title(user_rating, users[session.username]) %}
+                            <i class="fas fa-user" style="margin-right: 3px;"></i>{% if title %}<span style="color: {{ title_color }}; font-weight: bold; margin-right: 3px;">{{ title }}</span>{% endif %}{% if users[session.username].admin_rank == 'admin' %}<i class="fas fa-crown" style="color: #1a1a1a; text-shadow: 0 0 2px #fff, 0 0 4px #fff, 0 0 15px rgba(0,0,0,0.95), 0 0 25px rgba(0,0,0,0.85), 0 0 40px rgba(0,0,0,0.7); font-size: 11px; margin-right: 3px;"></i>{% elif users[session.username].admin_rank == 'dragon' %}<i class="fas fa-dragon" style="color: #FFD700; text-shadow: 0 0 8px #FFD700, 0 0 15px #FF8C00, 0 0 20px #FF8C00; font-size: 11px; margin-right: 3px;"></i>{% elif users[session.username].admin_rank == 'galaxy' %}<span class="galaxy-black-hole galaxy-black-hole-sm" style="margin-right: 4px;"></span>{% endif %}{% if users[session.username].admin_rank == 'creator' %}<span class="creator-cloud-aura creator-cloud-aura-sm">{{ session.username }}</span>{% else %}<span style="{% if users[session.username].admin_rank == 'dragon' %}text-shadow: 0 0 6px rgba(255,215,0,0.8), 0 0 12px rgba(255,215,0,0.6), 0 0 20px rgba(255,140,0,0.5), 0 0 30px rgba(255,140,0,0.3);{% elif users[session.username].admin_rank == 'galaxy' %}text-shadow: 0 0 8px #9400D3, 0 0 15px #8A2BE2, 0 0 25px #4B0082, 0 0 35px #9400D3;{% endif %}">{{ session.username }}</span>{% endif %}
+                        </a>
+                        <div class="notification-bell">
+                            <i class="fas fa-bell" onclick="toggleNotificationDropdown()"></i>
+                            <span class="notification-count" id="notification-count">0</span>
+                            <div class="notification-dropdown" id="notification-dropdown">
+                                <!-- Notifications will be dynamically added here -->
+                            </div>
+                        </div>
+                        <span class="online-count" id="online-count">0 online</span>
+                        <a href="{{ url_for('logout') }}" class="btn desktop-nav-item"><i class="fas fa-sign-out-alt"></i> Logout</a>
+                    </div>
+
+                    <!-- Mobile Slide-in Menu -->
+                    <div class="mobile-menu-overlay" id="mobile-menu-overlay" onclick="closeMobileMenu()"></div>
+                    <div class="mobile-menu" id="mobile-menu">
+                        <div class="mobile-menu-header">
+                            <span style="color: #f0d060; font-weight: bold;">Menu</span>
+                            <button onclick="closeMobileMenu()" class="mobile-menu-close">&times;</button>
+                        </div>
+                        <a href="{{ url_for('home') }}" class="mobile-menu-item"><i class="fas fa-home"></i> Lobby</a>
+                        <a href="{{ url_for('tournaments_page') }}" class="mobile-menu-item"><i class="fas fa-trophy"></i> Tournaments</a>
+                        <a href="{{ url_for('friends_page') }}" class="mobile-menu-item"><i class="fas fa-user-friends"></i> Friends <span id="mobile-friend-badge" style="display: none; background: #e74c3c; color: white; font-size: 10px; padding: 2px 6px; border-radius: 8px; margin-left: 5px;"></span></a>
+                        <div class="mobile-menu-divider"></div>
+                        <a href="{{ url_for('logout') }}" class="mobile-menu-item mobile-menu-logout"><i class="fas fa-sign-out-alt"></i> Logout</a>
+                    </div>
+                {% else %}
+                    <a href="{{ url_for('login') }}" class="btn"><i class="fas fa-sign-in-alt"></i> Login</a>
+                    <a href="{{ url_for('signup') }}" class="btn"><i class="fas fa-user-plus"></i> Sign Up</a>
+                {% endif %}
+            </div>
+        </nav>
+    </header>
+
+    <main class="container">
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                <div class="flash-messages">
+                    {% for message in messages %}
+                        <div class="flash-message">{{ message }}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Fixed Admin Button -->
+    {% if admin_rank %}
+    {% if admin_rank == 'creator' %}
+    <button id="admin-button" class="creator-cloud-aura" style="
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        border: none;
+        cursor: pointer;
+        z-index: 999;
+        font-size: 16px;
+        font-weight: bold;
+        color: #000 !important;
+    " onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+        Creator
+    </button>
+    {% else %}
+    <button id="admin-button" style="
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        {% if admin_rank == 'galaxy' %}
+        background: linear-gradient(135deg, #1a0033, #0d001a, #000);
+        box-shadow: 0 0 15px rgba(138, 43, 226, 0.6), 0 0 30px rgba(75, 0, 130, 0.4), 0 0 45px rgba(148, 0, 211, 0.3), inset 0 0 20px rgba(138, 43, 226, 0.2);
+        animation: galaxyPulse 3s ease-in-out infinite alternate;
+        {% elif admin_rank == 'dragon' %}
+        background: linear-gradient(135deg, #FFD700, #FF8C00);
+        box-shadow: 0 0 20px rgba(255, 165, 0, 0.6), 0 0 40px rgba(255, 140, 0, 0.4), 0 0 60px rgba(255, 69, 0, 0.3);
+        animation: dragonFlame 2s ease-in-out infinite alternate;
+        {% elif admin_rank == 'admin' %}
+        background: linear-gradient(135deg, #1a1a1a, #2d2d2d);
+        box-shadow: 0 0 25px rgba(139, 90, 43, 0.7), 0 0 40px rgba(139, 90, 43, 0.4), inset 0 0 15px rgba(139, 90, 43, 0.3);
+        border: 2px solid #8B5A2B;
+        {% else %}
+        background: linear-gradient(135deg, #dc3545, #c82333);
+        box-shadow: 0 4px 20px rgba(220, 53, 69, 0.4);
+        {% endif %}
+        color: white;
+        border: none;
+        padding: 15px 20px;
+        border-radius: 50px;
+        font-weight: 600;
+        cursor: pointer;
+        z-index: 999;
+        transition: all 0.3s ease;
+        font-size: 14px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    " onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+        {% if admin_rank == 'admin' %}
+        <i class="fas fa-crown" style="color: #1a1a1a; text-shadow: 0 0 10px #8B5A2B, 0 0 20px #8B5A2B, 0 0 30px #8B5A2B;"></i> <span style="color: white; font-weight: bold;">Admin</span>
+        {% elif admin_rank == 'dragon' %}
+        <i class="fas fa-dragon" style="color: #FFD700; text-shadow: 0 0 10px #FF8C00, 0 0 20px #FF4500, 0 0 30px #FF6600;"></i> <span style="color: white; font-weight: bold;">Dragon</span>
+        {% elif admin_rank == 'galaxy' %}
+        <span class="galaxy-black-hole galaxy-black-hole-md" style="margin-right: 5px;"></span> <span style="color: #E6E6FA; font-weight: bold; text-shadow: 0 0 5px #9400D3;">Galaxy</span>
+        {% else %}
+        <i class="fas fa-cogs"></i> {{ admin_rank|capitalize }}
+        {% endif %}
+    </button>
+    {% endif %}
+    {% endif %}
+
+    <!-- Admin Commands Modal -->
+    <style>
+        @media (max-width: 768px) {
+            #admin-modal-inner {
+                overflow-y: hidden !important;
+                max-height: 90vh !important;
+            }
+            #admin-response {
+                max-height: calc(90vh - 200px) !important;
+                overflow-y: auto !important;
+            }
+        }
+    </style>
+    {% if admin_rank %}
+    <div id="admin-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 1000;">
+        <div id="admin-modal-inner" style="
+            position: absolute; 
+            top: 50%; 
+            left: 50%; 
+            transform: translate(-50%, -50%); 
+            padding: 25px; 
+            border-radius: 16px; 
+            width: 85%; 
+            max-width: 650px; 
+            max-height: 85%; 
+            overflow-y: auto;
+            {% if admin_rank == 'creator' %}
+            background: linear-gradient(135deg, #2a2000, #1a1400, #2a2000);
+            border: 3px solid #FFD700;
+            box-shadow: 0 0 30px rgba(255, 215, 0, 0.4), 0 0 60px rgba(255, 215, 0, 0.2), inset 0 0 30px rgba(255, 215, 0, 0.1);
+            {% elif admin_rank == 'galaxy' %}
+            background: linear-gradient(135deg, #1a0033, #0d001a, #1a0033);
+            border: 3px solid #9400D3;
+            box-shadow: 0 0 30px rgba(138, 43, 226, 0.5), 0 0 60px rgba(75, 0, 130, 0.3), inset 0 0 30px rgba(138, 43, 226, 0.15);
+            {% elif admin_rank == 'dragon' %}
+            background: linear-gradient(135deg, #2a1a00, #1a1000, #2a1a00);
+            border: 3px solid #FF8C00;
+            box-shadow: 0 0 30px rgba(255, 140, 0, 0.5), 0 0 60px rgba(255, 69, 0, 0.3), inset 0 0 30px rgba(255, 140, 0, 0.15);
+            {% elif admin_rank == 'admin' %}
+            background: linear-gradient(135deg, #1a1a1a, #0d0d0d, #1a1a1a);
+            border: 3px solid #8B5A2B;
+            box-shadow: 0 0 30px rgba(139, 90, 43, 0.5), 0 0 60px rgba(139, 90, 43, 0.3), inset 0 0 30px rgba(139, 90, 43, 0.15);
+            {% else %}
+            background: linear-gradient(135deg, #2c2c2c, #1a1a1a);
+            border: 2px solid #555;
+            {% endif %}
+        ">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h3 style="
+                    margin: 0;
+                    font-size: 22px;
+                    display: flex;
+                    align-items: center;
+                    gap: 10px;
+                    {% if admin_rank == 'creator' %}
+                    color: #FFD700;
+                    text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+                    {% elif admin_rank == 'galaxy' %}
+                    color: #E6E6FA;
+                    text-shadow: 0 0 10px #9400D3, 0 0 20px #8A2BE2;
+                    {% elif admin_rank == 'dragon' %}
+                    color: #FFD700;
+                    text-shadow: 0 0 10px #FF8C00, 0 0 20px #FF4500;
+                    {% elif admin_rank == 'admin' %}
+                    color: #fff;
+                    text-shadow: 0 0 10px #8B5A2B, 0 0 20px #8B5A2B;
+                    {% else %}
+                    color: #ff4444;
+                    {% endif %}
+                ">
+                    {% if admin_rank == 'creator' %}
+                    <i class="fas fa-gem" style="color: #FFD700;"></i>
+                    {% elif admin_rank == 'galaxy' %}
+                    <span class="galaxy-black-hole galaxy-black-hole-md"></span>
+                    {% elif admin_rank == 'dragon' %}
+                    <i class="fas fa-dragon" style="color: #FFD700; text-shadow: 0 0 10px #FF8C00;"></i>
+                    {% elif admin_rank == 'admin' %}
+                    <i class="fas fa-crown" style="color: #1a1a1a; text-shadow: 0 0 8px #8B5A2B;"></i>
+                    {% endif %}
+                    {{ admin_rank|capitalize }} Commands
+                </h3>
+                <button onclick="closeAdminCommands()" style="
+                    background: rgba(255, 68, 68, 0.8); 
+                    color: white; 
+                    border: none; 
+                    padding: 8px 16px; 
+                    border-radius: 8px; 
+                    cursor: pointer;
+                    font-weight: bold;
+                    transition: all 0.2s ease;
+                " onmouseover="this.style.background='#ff4444'; this.style.transform='scale(1.05)'" onmouseout="this.style.background='rgba(255, 68, 68, 0.8)'; this.style.transform='scale(1)'">
+                    <i class="fas fa-times"></i> Close
+                </button>
+            </div>
+
+            <div style="margin-bottom: 20px; position: relative;">
+                <div style="display: flex; gap: 10px;">
+                    <div style="flex: 1; position: relative;">
+                        <input type="text" id="admin-command-input" placeholder="Enter admin command..." autocomplete="off" style="
+                            width: 100%;
+                            padding: 12px 15px; 
+                            background: rgba(0, 0, 0, 0.4); 
+                            border: 2px solid {% if admin_rank == 'creator' %}#FFD700{% elif admin_rank == 'galaxy' %}#9400D3{% elif admin_rank == 'dragon' %}#FF8C00{% elif admin_rank == 'admin' %}#8B5A2B{% else %}#555{% endif %}; 
+                            color: white; 
+                            border-radius: 8px;
+                            font-size: 15px;
+                            box-sizing: border-box;
+                        ">
+                        <div id="admin-command-suggestions" style="
+                            display: none;
+                            position: absolute;
+                            top: 100%;
+                            left: 0;
+                            right: 0;
+                            background: rgba(20, 20, 20, 0.98);
+                            border: 2px solid {% if admin_rank == 'creator' %}#FFD700{% elif admin_rank == 'galaxy' %}#9400D3{% elif admin_rank == 'dragon' %}#FF8C00{% elif admin_rank == 'admin' %}#8B5A2B{% else %}#555{% endif %};
+                            border-top: none;
+                            border-radius: 0 0 8px 8px;
+                            max-height: 200px;
+                            overflow-y: auto;
+                            z-index: 1001;
+                        "></div>
+                    </div>
+                    <button onclick="executeAdminCommand()" style="
+                        padding: 12px 20px; 
+                        background: {% if admin_rank == 'creator' %}linear-gradient(135deg, #FFD700, #FFA500){% elif admin_rank == 'galaxy' %}linear-gradient(135deg, #9400D3, #8A2BE2){% elif admin_rank == 'dragon' %}linear-gradient(135deg, #FF8C00, #FF6600){% elif admin_rank == 'admin' %}linear-gradient(135deg, #8B5A2B, #6B4A2B){% else %}linear-gradient(135deg, #28a745, #218838){% endif %}; 
+                        color: {% if admin_rank == 'creator' %}#000{% else %}white{% endif %}; 
+                        border: none; 
+                        border-radius: 8px; 
+                        cursor: pointer;
+                        font-weight: bold;
+                        font-size: 15px;
+                        transition: all 0.2s ease;
+                    " onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+                        <i class="fas fa-play"></i> Execute
+                    </button>
+                </div>
+            </div>
+
+            <div id="admin-response" style="
+                background: rgba(0, 0, 0, 0.5); 
+                padding: 20px; 
+                border-radius: 10px; 
+                min-height: 250px; 
+                max-height: 400px; 
+                overflow-y: auto; 
+                font-family: 'Segoe UI', Tahoma, sans-serif; 
+                font-size: 15px;
+                border: 1px solid {% if admin_rank == 'creator' %}rgba(255, 215, 0, 0.3){% elif admin_rank == 'galaxy' %}rgba(148, 0, 211, 0.3){% elif admin_rank == 'dragon' %}rgba(255, 140, 0, 0.3){% elif admin_rank == 'admin' %}rgba(139, 90, 43, 0.3){% else %}rgba(85, 85, 85, 0.3){% endif %};
+            "></div>
+
+            <div style="margin-top: 15px; font-size: 13px; color: #aaa; text-align: center;">
+                <i class="fas fa-terminal"></i> Type <span style="color: {% if admin_rank == 'creator' %}#FFD700{% elif admin_rank == 'galaxy' %}#E6E6FA{% elif admin_rank == 'dragon' %}#FF8C00{% elif admin_rank == 'admin' %}#8B5A2B{% else %}#888{% endif %}; font-weight: bold;">cmd</span> to see all available commands
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Banlist Modal -->
+    <div id="banlist-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 10001; overflow-y: auto;">
+        <div style="max-width: 700px; margin: 40px auto; background: linear-gradient(135deg, #1a0000, #0d0000, #1a0000); padding: 25px; border-radius: 16px; border: 3px solid #ff4444; box-shadow: 0 0 30px rgba(255, 68, 68, 0.4), 0 0 60px rgba(255, 0, 0, 0.2);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2 style="color: #ff4444; margin: 0; text-shadow: 0 0 10px rgba(255, 68, 68, 0.5);"><i class="fas fa-gavel"></i> Ban List</h2>
+                <button onclick="closeBanlistModal()" style="background: rgba(255, 68, 68, 0.8); color: white; border: none; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-weight: bold;">
+                    <i class="fas fa-times"></i> Close
+                </button>
+            </div>
+            <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+                <button id="banlist-tab-recent" onclick="switchBanlistTab('recent')" style="flex: 1; padding: 12px; background: #ff4444; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 14px; transition: all 0.2s;">
+                    <i class="fas fa-clock"></i> Recent Bans
+                </button>
+                <button id="banlist-tab-banned" onclick="switchBanlistTab('banned')" style="flex: 1; padding: 12px; background: rgba(255, 68, 68, 0.2); color: #ff8888; border: 2px solid #ff4444; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 14px; transition: all 0.2s;">
+                    <i class="fas fa-ban"></i> Banned Players
+                </button>
+            </div>
+            <div id="banlist-content" style="max-height: 60vh; overflow-y: auto;">
+                <div style="text-align: center; color: #888; padding: 40px;"><i class="fas fa-spinner fa-spin"></i> Loading...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Board Setup Modal (for piece customization) -->
+    <div id="board-setup-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 10000; overflow-y: auto;">
+        <div style="max-width: 600px; margin: 50px auto; background: linear-gradient(145deg, #1a1a2e, #16213e); padding: 25px; border-radius: 15px; border: 2px solid #4CAF50;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2 style="color: #4CAF50; margin: 0;"><i class="fas fa-chess"></i> Board Setup - Piece Designs</h2>
+                <button onclick="closeBoardSetup()" style="background: #ff4444; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; font-size: 14px;">Close</button>
+            </div>
+            <p style="color: #aaa; margin-bottom: 20px;">Choose your piece design. Your opponent will see your custom pieces during games!</p>
+            <div id="piece-designs-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 15px;">
+                <!-- Piece designs will be loaded here -->
+            </div>
+            <div id="current-piece-info" style="margin-top: 20px; padding: 15px; background: rgba(76, 175, 80, 0.2); border-radius: 10px; text-align: center;">
+                <span style="color: #4CAF50;">Current Design: </span>
+                <span id="current-design-name" style="color: white; font-weight: bold;">Classic Circle</span>
+            </div>
+        </div>
+    </div>
+
+
+    <script>
+        // Global challenge notification system
+        let challengeSpamProtection = new Map(); // challengerId -> lastChallengeTime
+        let isInGame = false; // Track if user is currently in a game
+        let pendingChallenges = new Map(); // challengeId -> challengeData
+
+        function initializeGlobalChallengeSystem() {
+            if (!window.socket) {
+                console.log('Challenge system: Socket not ready, retrying...');
+                setTimeout(initializeGlobalChallengeSystem, 100);
+                return;
+            }
+
+            // Remove any existing listeners to prevent duplicates
+            if (window.socket.listeners('challenge_received').length > 0) {
+                console.log('Challenge system: Already initialized');
+                return;
+            }
+
+            console.log('Challenge system: Initializing global challenge notifications');
+
+            // Listen for challenge notifications globally
+            window.socket.on('challenge_received', function(data) {
+                console.log('Challenge system: Received challenge notification', data);
+                showGlobalChallengeNotification(data);
+            });
+
+            // Track game state
+            window.socket.on('players_matched', function(data) {
+                isInGame = true;
+            });
+
+            window.socket.on('game_over', function(data) {
+                isInGame = false;
+            });
+
+            window.socket.on('game_canceled', function(data) {
+                isInGame = false;
+            });
+
+            console.log('Challenge system: Global challenge system initialized');
+        }
+
+        function showGlobalChallengeNotification(challengeData) {
+            const challenger = challengeData.challenger;
+            const timeControl = challengeData.time_control;
+            const gameType = challengeData.game_type;
+            const challengeId = challengeData.challenge_id;
+
+            // Spam protection - only allow one challenge per player every 10 seconds
+            const now = Date.now();
+            const lastChallenge = challengeSpamProtection.get(challenger);
+            if (lastChallenge && (now - lastChallenge) < 10000) {
+                console.log('Challenge spam protection: ignoring challenge from', challenger);
+                return;
+            }
+            challengeSpamProtection.set(challenger, now);
+
+            // Create notification container
+            const notification = document.createElement('div');
+            notification.className = 'global-challenge-notification';
+            notification.style.cssText = `
+                background: linear-gradient(135deg, #2d2a24, #3a3528);
+                border: 2px solid #f0d060;
+                border-radius: 8px;
+                padding: 12px 16px;
+                margin-bottom: 10px;
+                color: white;
+                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
+                animation: slideInRight 0.4s ease-out;
+                pointer-events: auto;
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                max-width: 300px;
+                opacity: 0;
+                transform: translateX(100%);
+                transition: all 0.3s ease;
+            `;
+
+            // Different styles based on game state
+            if (isInGame) {
+                // Smaller, less intrusive for in-game
+                notification.style.cssText += `
+                    padding: 8px 12px;
+                    font-size: 12px;
+                    opacity: 0.85;
+                    border-color: #666;
+                `;
+            }
+
+            notification.innerHTML = `
+                <style>
+                    @keyframes slideInRight {
+                        0% {
+                            opacity: 0;
+                            transform: translateX(100%);
+                        }
+                        100% {
+                            opacity: 1;
+                            transform: translateX(0);
+                        }
+                    }
+
+                    @keyframes slideOutRight {
+                        0% {
+                            opacity: 1;
+                            transform: translateX(0);
+                        }
+                        100% {
+                            opacity: 0;
+                            transform: translateX(100%);
+                        }
+                    }
+
+                    @keyframes slideDown {
+                        0% { opacity: 0; transform: translateY(-100%); }
+                        100% { opacity: 1; transform: translateY(0); }
+                    }
+
+                    @keyframes slideUp {
+                        0% { opacity: 1; transform: translateY(0); }
+                        100% { opacity: 0; transform: translateY(-100%); }
+                    }
+
+                    .challenge-btn {
+                        background: #28a745;
+                        color: white;
+                        border: none;
+                        padding: 6px 12px;
+                        border-radius: 4px;
+                        cursor: pointer;
+                        font-size: 12px;
+                        margin: 2px;
+                        transition: background 0.2s;
+                    }
+
+                    .challenge-btn:hover {
+                        background: #218838;
+                    }
+
+                    .challenge-btn.decline {
+                        background: #dc3545;
+                    }
+
+                    .challenge-btn.decline:hover {
+                        background: #c82333;
+                    }
+                </style>
+
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <div style="display: flex; align-items: center;">
+                        <i class="fas fa-circle" style="color: #f0d060; margin-right: 8px; font-size: ${isInGame ? '12px' : '16px'};"></i>
+                        <div>
+                            <div style="font-weight: bold; color: #f0d060; font-size: ${isInGame ? '12px' : '14px'};">Challenge from ${challenger}</div>
+                            <div style="font-size: ${isInGame ? '10px' : '12px'}; color: #ccc;">${timeControl} • ${gameType}</div>
+                        </div>
+                    </div>
+                    <button onclick="dismissGlobalChallenge('${challengeId}', this)" style="
+                        background: none;
+                        border: none;
+                        color: #999;
+                        cursor: pointer;
+                        font-size: 16px;
+                        padding: 0;
+                        margin-left: 10px;
+                    ">&times;</button>
+                </div>
+
+                ${isInGame ? `
+                    <div style="font-size: 10px; color: #ffc107; margin-bottom: 6px;">
+                        <i class="fas fa-exclamation-triangle"></i> You're currently in a game
+                    </div>                ` : ''}
+
+                <div style="display: flex; gap: 8px;">
+                    <button class="challenge-btn" onclick="acceptGlobalChallenge('${challengeId}', this)" ${isInGame ? 'disabled style="opacity: 0.5; cursor: not-allowed;"' : ''}>
+                        <i class="fas fa-check"></i> Accept
+                    </button>
+                    <button class="challenge-btn decline" onclick="declineGlobalChallenge('${challengeId}', this)">
+                        <i class="fas fa-times"></i> Decline
+                    </button>
+                </div>
+            `;
+
+            // Ensure notifications container exists
+            let container = document.getElementById('globalChallengeNotifications');
+            if (!container) {
+                console.log('Challenge system: Creating notification container');
+                container = document.createElement('div');
+                container.id = 'globalChallengeNotifications';
+                container.style.cssText = `
+                    position: fixed;
+                    top: 70px;
+                    right: 20px;
+                    width: auto;
+                    max-width: 350px;
+                    z-index: 9999;
+                    display: flex;
+                    flex-direction: column;
+                    align-items: flex-end;
+                    pointer-events: none;
+                `;
+                document.body.appendChild(container);
+            }
+
+            // Add to notifications container
+            container.appendChild(notification);
+
+            // Trigger animation
+            setTimeout(() => {
+                notification.style.opacity = '1';
+                notification.style.transform = 'translateX(0)';
+            }, 50);
+
+            // Auto-remove after 30 seconds if no action
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    removeGlobalChallenge(notification);
+                }
+            }, 30000);
+        }
+
+        // Show rank change notification (promote/demote) - similar to challenge notifications
+        function showRankChangeNotification(data) {
+            console.log('showRankChangeNotification called with:', data);
+            
+            // Ensure notification container exists (use same container as challenges but centered)
+            let container = document.getElementById('rankNotificationContainer');
+            if (!container) {
+                console.log('Creating rank notification container');
+                container = document.createElement('div');
+                container.id = 'rankNotificationContainer';
+                container.style.cssText = `
+                    position: fixed;
+                    top: 80px;
+                    left: 50%;
+                    transform: translateX(-50%);
+                    z-index: 99999;
+                    pointer-events: none;
+                `;
+                document.body.appendChild(container);
+            }
+            
+            // Create notification element
+            const notification = document.createElement('div');
+            notification.className = 'rank-change-notification';
+            
+            const isPromoted = data.type === 'promoted';
+            const bgColor = isPromoted ? 'linear-gradient(135deg, #28a745, #20c997)' : 'linear-gradient(135deg, #dc3545, #c82333)';
+            const icon = isPromoted ? 'fa-crown' : 'fa-arrow-down';
+            
+            notification.style.cssText = `
+                background: ${bgColor};
+                border: 3px solid #fff;
+                border-radius: 12px;
+                padding: 20px 40px;
+                color: white;
+                box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+                pointer-events: auto;
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                font-size: 18px;
+                font-weight: bold;
+                text-align: center;
+                min-width: 350px;
+                opacity: 0;
+                transform: translateY(-50px);
+                transition: all 0.4s ease;
+            `;
+            
+            notification.innerHTML = `
+                <div style="display: flex; align-items: center; justify-content: center; gap: 12px;">
+                    <i class="fas ${icon}" style="font-size: 28px;"></i>
+                    <span>${data.message}</span>
+                </div>
+            `;
+            
+            // Clear any existing notifications
+            container.innerHTML = '';
+            container.appendChild(notification);
+            console.log('Rank notification appended to container');
+            
+            // Trigger animation after a tiny delay
+            setTimeout(() => {
+                notification.style.opacity = '1';
+                notification.style.transform = 'translateY(0)';
+                console.log('Rank notification animation triggered');
+            }, 50);
+            
+            // Update admin button visibility or create it
+            let adminButton = document.getElementById('admin-button');
+            let adminModal = document.getElementById('admin-modal');
+            
+            if (data.new_rank) {
+                // Calculate button styles based on rank
+                let buttonBg, buttonShadow, buttonBorder = 'none';
+                let iconHtml, labelHtml;
+                
+                if (data.new_rank === 'creator') {
+                    buttonBg = 'linear-gradient(135deg, #FFD700, #FFA500)';
+                    buttonShadow = '0 4px 20px rgba(255, 215, 0, 0.4)';
+                    iconHtml = '<i class="fas fa-cogs"></i>';
+                    labelHtml = 'Creator';
+                } else if (data.new_rank === 'galaxy') {
+                    buttonBg = 'linear-gradient(135deg, #1a0033, #0d001a, #000)';
+                    buttonShadow = '0 0 15px rgba(138, 43, 226, 0.6), 0 0 30px rgba(75, 0, 130, 0.4), 0 0 45px rgba(148, 0, 211, 0.3), inset 0 0 20px rgba(138, 43, 226, 0.2)';
+                    iconHtml = '<span class="galaxy-black-hole galaxy-black-hole-sm"></span>';
+                    labelHtml = '<span style="color: #E6E6FA; font-weight: bold; text-shadow: 0 0 5px #9400D3;">Galaxy</span>';
+                } else if (data.new_rank === 'dragon') {
+                    buttonBg = 'linear-gradient(135deg, #FFD700, #FF8C00)';
+                    buttonShadow = '0 0 20px rgba(255, 165, 0, 0.6), 0 0 40px rgba(255, 140, 0, 0.4), 0 0 60px rgba(255, 69, 0, 0.3)';
+                    iconHtml = '<i class="fas fa-dragon" style="color: #FFD700; text-shadow: 0 0 10px #FF8C00, 0 0 20px #FF4500, 0 0 30px #FF6600;"></i>';
+                    labelHtml = '<span style="color: white; font-weight: bold;">Dragon</span>';
+                } else {
+                    buttonBg = 'linear-gradient(135deg, #1a1a1a, #2d2d2d)';
+                    buttonShadow = '0 0 25px rgba(139, 90, 43, 0.7), 0 0 40px rgba(139, 90, 43, 0.4), inset 0 0 15px rgba(139, 90, 43, 0.3)';
+                    buttonBorder = '2px solid #8B5A2B';
+                    iconHtml = '<i class="fas fa-crown" style="color: #1a1a1a; text-shadow: 0 0 10px #8B5A2B, 0 0 20px #8B5A2B, 0 0 30px #8B5A2B;"></i>';
+                    labelHtml = '<span style="color: white; font-weight: bold;">Admin</span>';
+                }
+                
+                if (adminButton) {
+                    // Update existing button
+                    adminButton.style.display = 'flex';
+                    adminButton.style.background = buttonBg;
+                    adminButton.style.boxShadow = buttonShadow;
+                    adminButton.style.border = buttonBorder;
+                    adminButton.innerHTML = iconHtml + ' ' + labelHtml;
+                } else {
+                    // Create new admin button
+                    adminButton = document.createElement('button');
+                    adminButton.id = 'admin-button';
+                    adminButton.style.cssText = `
+                        position: fixed;
+                        bottom: 20px;
+                        right: 20px;
+                        background: ${buttonBg};
+                        box-shadow: ${buttonShadow};
+                        border: ${buttonBorder};
+                        color: white;
+                        padding: 15px 20px;
+                        border-radius: 50px;
+                        font-weight: 600;
+                        cursor: pointer;
+                        z-index: 999;
+                        transition: all 0.3s ease;
+                        font-size: 14px;
+                        display: flex;
+                        align-items: center;
+                        gap: 8px;
+                    `;
+                    adminButton.innerHTML = iconHtml + ' ' + labelHtml;
+                    adminButton.onmouseover = function() { this.style.transform = 'scale(1.05)'; };
+                    adminButton.onmouseout = function() { this.style.transform = 'scale(1)'; };
+                    document.body.appendChild(adminButton);
+                    
+                    // Initialize drag functionality for new button
+                    if (typeof initializeAdminButtonDrag === 'function') {
+                        setTimeout(initializeAdminButtonDrag, 100);
+                    }
+                }
+                
+                // Create admin modal if it doesn't exist
+                if (!adminModal) {
+                    let titleColor = '#ff4444';
+                    if (data.new_rank === 'creator') titleColor = '#FFD700';
+                    else if (data.new_rank === 'galaxy') titleColor = '#9400D3';
+                    else if (data.new_rank === 'dragon') titleColor = '#FF4500';
+                    
+                    adminModal = document.createElement('div');
+                    adminModal.id = 'admin-modal';
+                    adminModal.style.cssText = 'display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000;';
+                    adminModal.innerHTML = `
+                        <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #2c2c2c; padding: 20px; border-radius: 8px; width: 80%; max-width: 600px; max-height: 80%; overflow-y: auto;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                                <h3 id="admin-modal-title" style="color: ${titleColor}; margin: 0;">${data.new_rank.charAt(0).toUpperCase() + data.new_rank.slice(1)} Commands</h3>
+                                <button onclick="closeAdminCommands()" style="background: #ff4444; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer;">Close</button>
+                            </div>
+                            <div style="margin-bottom: 20px;">
+                                <input type="text" id="admin-command-input" placeholder="Enter admin command..." style="width: 70%; padding: 10px; background: #1c1c1c; border: 1px solid #444; color: white; border-radius: 3px;">
+                                <button onclick="executeAdminCommand()" style="width: 25%; padding: 10px; background: #28a745; color: white; border: none; border-radius: 3px; cursor: pointer; margin-left: 5px;">Execute</button>
+                            </div>
+                            <div id="admin-response" style="background: #1c1c1c; padding: 15px; border-radius: 3px; min-height: 200px; max-height: 300px; overflow-y: auto; font-family: monospace; font-size: 14px; white-space: pre-wrap;"></div>
+                            <div style="margin-top: 15px; font-size: 12px; color: #888;">
+                                Type "cmd" to see all available commands
+                            </div>
+                        </div>
+                    `;
+                    document.body.appendChild(adminModal);
+                    
+                    // Add Enter key handler for command input
+                    setTimeout(() => {
+                        const input = document.getElementById('admin-command-input');
+                        if (input) {
+                            input.addEventListener('keypress', function(e) {
+                                if (e.key === 'Enter') executeAdminCommand();
+                            });
+                        }
+                    }, 100);
+                }
+            } else {
+                // User was demoted - remove admin UI completely
+                if (adminButton) {
+                    adminButton.remove();
+                }
+                if (adminModal) {
+                    adminModal.remove();
+                }
+            }
+            
+            // Remove after 6 seconds
+            setTimeout(() => {
+                notification.style.opacity = '0';
+                notification.style.transform = 'translateY(-50px)';
+                setTimeout(() => {
+                    if (notification.parentNode) {
+                        notification.parentNode.removeChild(notification);
+                    }
+                }, 400);
+            }, 6000);
+        }
+
+        function acceptGlobalChallenge(challengeId, buttonElement) {
+            if (isInGame) {
+                showQuickMessage('Cannot accept challenge while in a game!', 'error');
+                return;
+            }
+
+            if (window.socket) {
+                window.socket.emit('accept_challenge', { challenge_id: challengeId });
+
+                // Update button to show accepting state
+                buttonElement.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Accepting...';
+                buttonElement.disabled = true;
+
+                // Remove notification after short delay
+                setTimeout(() => {
+                    const notification = buttonElement.closest('.global-challenge-notification');
+                    if (notification) {
+                        removeGlobalChallenge(notification);
+                    }
+                }, 1000);
+            }
+        }
+
+        function declineGlobalChallenge(challengeId, buttonElement) {
+            if (window.socket) {
+                window.socket.emit('decline_challenge', { challenge_id: challengeId });
+
+                // Update button to show declining state
+                buttonElement.innerHTML = '<i class="fas fa-check"></i> Declined';
+                buttonElement.disabled = true;
+
+                // Remove notification after short delay
+                setTimeout(() => {
+                    const notification = buttonElement.closest('.global-challenge-notification');
+                    if (notification) {
+                        removeGlobalChallenge(notification);
+                    }
+                }, 1000);
+            }
+        }
+
+        function dismissGlobalChallenge(challengeId, buttonElement) {
+            const notification = buttonElement.closest('.global-challenge-notification');
+            if (notification) {
+                removeGlobalChallenge(notification);
+            }
+        }
+
+        function removeGlobalChallenge(notification) {
+            notification.style.animation = 'slideOutRight 0.3s ease-in';
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.parentNode.removeChild(notification);
+                }
+            }, 300);
+        }
+
+        function showAdminTournamentInvite(data) {
+            console.log('showAdminTournamentInvite called with:', data);
+            
+            let container = document.getElementById('globalChallengeContainer');
+            if (!container) {
+                container = document.createElement('div');
+                container.id = 'globalChallengeContainer';
+                container.style.cssText = `
+                    position: fixed;
+                    top: 80px;
+                    right: 20px;
+                    z-index: 99999;
+                    display: flex;
+                    flex-direction: column;
+                    gap: 10px;
+                    pointer-events: none;
+                `;
+                document.body.appendChild(container);
+            }
+            
+            const notification = document.createElement('div');
+            notification.className = 'global-challenge-notification admin-invite-notification';
+            notification.dataset.tournamentId = data.tournament_id;
+            
+            notification.style.cssText = `
+                background: linear-gradient(135deg, #1a1a1a 0%, #0d0d0d 100%);
+                border: 2px solid #333;
+                border-radius: 12px;
+                padding: 15px 20px;
+                color: white;
+                box-shadow: 0 0 20px rgba(0,0,0,0.8), 0 0 40px rgba(0,0,0,0.4);
+                pointer-events: auto;
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                animation: slideInRight 0.5s ease-out;
+                min-width: 280px;
+            `;
+            
+            notification.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px;">
+                    <i class="fas fa-crown" style="font-size: 20px; color: #1a1a1a; text-shadow: 0 0 5px rgba(255,255,255,0.5);"></i>
+                    <span style="font-weight: bold; color: #aaa;">Admin Tournament Invite</span>
+                </div>
+                <div style="margin-bottom: 10px;">
+                    <span style="color: #e0e0e0;">You were invited to <strong style="color: #fff;">${data.tournament_name}</strong> by <strong style="color: #f0d060;">${data.invited_by}</strong></span>
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    <button onclick="joinAdminTournament('${data.tournament_id}', this)" style="background: linear-gradient(135deg, #28a745, #20c997); color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: bold; flex: 1;">
+                        <i class="fas fa-check"></i> Join
+                    </button>
+                    <button onclick="dismissAdminInvite(this)" style="background: #444; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; flex: 1;">
+                        <i class="fas fa-times"></i> Dismiss
+                    </button>
+                </div>
+            `;
+            
+            container.appendChild(notification);
+            
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    removeGlobalChallenge(notification);
+                }
+            }, 60000);
+        }
+
+        function joinAdminTournament(tournamentId, buttonElement) {
+            window.location.href = '/tournaments?join=' + tournamentId;
+        }
+
+        function dismissAdminInvite(buttonElement) {
+            const notification = buttonElement.closest('.admin-invite-notification');
+            if (notification) {
+                removeGlobalChallenge(notification);
+            }
+        }
+
+        function showQuickMessage(message, type = 'info') {
+            const msg = document.createElement('div');
+            msg.style.cssText = `
+                position: fixed;
+                top: 80px;
+                right: 20px;
+                background: ${type === 'error' ? '#dc3545' : '#28a745'};
+                color: white;
+                padding: 10px 15px;
+                border-radius: 5px;
+                z-index: 10000;
+                animation: slideInRight 0.3s ease-out;
+                box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+            `;
+            msg.textContent = message;
+
+            document.body.appendChild(msg);
+
+            setTimeout(() => {
+                msg.style.animation = 'slideOutRight 0.3s ease-in';
+                setTimeout(() => {
+                    if (msg.parentNode) {
+                        msg.parentNode.removeChild(msg);
+                    }
+                }, 300);
+            }, 3000);
+        }
+
+        // Initialize when DOM is ready
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeGlobalChallengeSystem();
+        });
+
+        // Also initialize when socket becomes available
+        window.addEventListener('load', function() {
+            if (window.socket) {
+                initializeGlobalChallengeSystem();
+            }
+        });
+
+    </script>
+
+    <div id="globalChallengeNotifications" style="
+        position: fixed;
+        top: 70px;
+        right: 20px;
+        width: auto;
+        max-width: 350px;
+        z-index: 9999;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        pointer-events: none;
+    "></div>
+
+    <!-- Mobile Search Overlay -->
+    <div id="mobile-search-overlay" class="mobile-search-overlay" onclick="closeMobileSearchIfClickedOutside(event)">
+        <button class="mobile-search-close" onclick="closeMobileSearch()">
+            <i class="fas fa-times"></i>
+        </button>
+        <input type="text" id="mobile-player-search" class="mobile-search-input" placeholder="Search players..." onclick="event.stopPropagation()">
+        <div id="mobile-search-results" class="mobile-search-results" onclick="event.stopPropagation()">
+            <!-- Results will be populated here -->
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        window.socket = null;
+        window.isSeekingGame = false;
+        window.gameCountdown = null;
+        window.countdownInterval = null;
+
+        // Initialize socket connection
+        function initializeSocket() {
+            if (window.socket && window.socket.connected) {
+                return; // Already connected
+            }
+
+            console.log('Socket initializing...');
+            window.socket = io();
+
+            window.socket.on('connect', function() {
+                console.log('Connected to server');
+                window.isSeekingGame = false;
+                setupAdminListeners();
+                registerGlobalSocketListeners();
+                setTimeout(function() {
+                    initializeNotificationBell();
+                }, 100);
+            });
+
+            window.socket.on('disconnect', function() {
+                console.log('Disconnected from server');
+                window.isSeekingGame = false;
+            });
+
+            window.socket.on('user_count', function(count) {
+                const element = document.getElementById('online-count');
+                if (element) {
+                    element.textContent = count + ' online';
+                }
+            });
+
+            // Handle real-time rank changes (promote/demote) - for ALL users
+            window.socket.on('rank_changed', function(data) {
+                console.log('Rank changed event received:', data);
+                showRankChangeNotification(data);
+            });
+
+            window.socket.on('admin_tournament_invite', function(data) {
+                console.log('Admin tournament invite received:', data);
+                showAdminTournamentInvite(data);
+            });
+
+            window.socket.on('user_banned', function(data) {
+                // Hide all content and show only ban message with logout button
+                document.body.innerHTML = `
+                    <div style="display: flex; justify-content: center; align-items: center; height: 100vh; background: #1a1a1a; color: white; font-family: Arial, sans-serif;">
+                        <div style="text-align: center; background: #2d2d2d; padding: 40px; border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.5);">
+                            <h2 style="color: #ff4444; margin-bottom: 20px;">Account Banned</h2>
+                            <p style="margin-bottom: 20px; font-size: 16px;">${data.message}</p>
+                            <p style="margin-bottom: 30px; color: #aaa; font-size: 14px;">${data.reason}</p>
+                            <button onclick="window.location.href='/logout'" style="background: #ff4444; color: white; border: none; padding: 12px 30px; border-radius: 5px; font-size: 16px; cursor: pointer;">
+                                Log Out
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+
+            window.socket.on('user_kicked', function(data) {
+                alert(data.message + '\nReason: ' + data.reason);
+                window.location.href = '/';
+            });
+
+            window.socket.on('waiting_for_opponent', function(data) {
+                console.log('Waiting for opponent with time control:', data.time_control);
+                updateSeekingStatus('Looking for opponent (' + data.time_control + ')...', true);
+            });
+
+            window.socket.on('players_matched', function(data) {
+                console.log('Players matched:', data);
+                window.isSeekingGame = false;
+
+                // Clear any existing countdown immediately
+                if (window.countdownInterval) {
+                    clearInterval(window.countdownInterval);
+                    window.countdownInterval = null;
+                }
+
+                // Start synchronized 3-second countdown for both players
+                window.gameCountdown = 3;
+                updateSeekingStatus('Opponent found! Game starts in ' + window.gameCountdown + ' seconds...', true, false);
+
+                // Synchronized countdown that both players will see
+                window.countdownInterval = setInterval(function() {
+                    window.gameCountdown--;
+                    if (window.gameCountdown > 0) {
+                        updateSeekingStatus('Opponent found! Game starts in ' + window.gameCountdown + ' seconds...', true, false);
+                    } else {
+                        clearInterval(window.countdownInterval);
+                        window.countdownInterval = null;
+                        updateSeekingStatus('Starting game...', true, false);
+
+                        // Redirect to game after a short delay
+                        setTimeout(function() {
+                            window.location.href = '/play?room=' + data.room_id;
+                        }, 500);
+                    }
+                }, 1000);
+            });
+
+            window.socket.on('game_start', function(data) {
+                window.location.href = '/play?room=' + data.room_id;
+            });
+
+            window.socket.on('seek_cancelled', function() {
+                window.isSeekingGame = false;
+                updateSeekingStatus('', false);
+            });
+
+            window.socket.on('announcement', function(data) {
+                alert(data.message);
+            });
+
+            // Handle pause status updates (only for tournament leaderboard)
+            window.socket.on('pause_status', function(data) {
+                // Pause status is now only shown in tournament leaderboard
+            });
+
+            // Handle real-time tournament updates (for spawntournament command)
+            window.socket.on('tournaments_updated', function(data) {
+                console.log('Tournaments updated in real-time');
+                // Check if we're on the lobby page with tournament section
+                var tournamentList = document.getElementById('upcoming-tournaments');
+                if (tournamentList) {
+                    // Reload tournament section
+                    fetch('/api/tournaments')
+                        .then(function(response) { return response.json(); })
+                        .then(function(data) {
+                            if (data.tournaments && data.tournaments.length > 0) {
+                                var html = '';
+                                data.tournaments.slice(0, 5).forEach(function(t) {
+                                    html += '<div class="tournament-item" onclick="window.location.href=\'/tournament/' + t.id + '\'" style="cursor: pointer; padding: 10px; margin: 5px 0; background: rgba(76, 175, 80, 0.2); border-radius: 5px; border-left: 3px solid #4CAF50;">';
+                                    html += '<strong>' + t.name + '</strong><br>';
+                                    html += '<small>' + t.time_control + ' \u2022 ' + (t.status === 'active' ? 'In Progress' : 'Starting Soon') + '</small>';
+                                    html += '</div>';
+                                });
+                                tournamentList.innerHTML = html;
+                            }
+                        })
+                        .catch(function(e) { console.error('Failed to fetch tournaments:', e); });
+                }
+            });
+
+            // Handle other users' pause status (for leaderboards/player lists)
+            window.socket.on('user_pause_status', function(data) {
+                // Update pause indicators in leaderboards or player lists
+                const pauseIcons = document.querySelectorAll(`[data-player-pause="${data.username}"]`);
+                pauseIcons.forEach(icon => {
+                    icon.style.display = data.paused ? 'inline' : 'none';
+                });
+            });
+
+            // Challenge handling
+            window.socket.on('challenge_received', function(data) {
+                console.log('Challenge received:', data);
+                pendingChallenges.set(data.challenge_id, data);
+                updateNotificationBell();
+                renderNotificationDropdown();
+
+                // Also trigger global notification
+                showGlobalChallengeNotification(data);
+            });
+
+            // Board setup handlers
+            window.socket.on('open_board_setup', function() {
+                openBoardSetup();
+            });
+
+            window.socket.on('piece_designs_list', function(data) {
+                renderPieceDesigns(data.designs, data.current);
+            });
+
+            window.socket.on('piece_design_updated', function(data) {
+                document.getElementById('current-design-name').textContent = data.info.name;
+                // Update all design cards to show new selection with visual styles
+                document.querySelectorAll('.piece-design-card').forEach(function(card) {
+                    var isSelected = card.dataset.design === data.design;
+                    card.classList.remove('selected');
+                    if (isSelected) {
+                        card.classList.add('selected');
+                        card.style.background = 'rgba(76, 175, 80, 0.3)';
+                        card.style.borderColor = '#4CAF50';
+                        card.style.boxShadow = '0 0 15px rgba(76, 175, 80, 0.5)';
+                    } else {
+                        card.style.background = 'rgba(30, 30, 50, 0.8)';
+                        card.style.borderColor = '#444';
+                        card.style.boxShadow = 'none';
+                    }
+                });
+            });
+        }
+
+        // Board Setup Functions
+        function openBoardSetup() {
+            document.getElementById('board-setup-modal').style.display = 'block';
+            // Close admin modal if open
+            var adminModal = document.getElementById('admin-modal');
+            if (adminModal) adminModal.style.display = 'none';
+            // Request piece designs from server
+            if (window.socket) {
+                window.socket.emit('get_piece_designs');
+            }
+        }
+
+        function closeBoardSetup() {
+            document.getElementById('board-setup-modal').style.display = 'none';
+        }
+
+        function renderPieceDesigns(designs, currentDesign) {
+            var grid = document.getElementById('piece-designs-grid');
+            if (!grid) return;
+            
+            var html = '';
+            for (var key in designs) {
+                var design = designs[key];
+                var isSelected = key === currentDesign;
+                html += '<div class="piece-design-card ' + (isSelected ? 'selected' : '') + '" data-design="' + key + '" onclick="selectPieceDesign(\'' + key + '\')" style="' +
+                    'background: ' + (isSelected ? 'rgba(76, 175, 80, 0.3)' : 'rgba(30, 30, 50, 0.8)') + ';' +
+                    'border: 2px solid ' + (isSelected ? '#4CAF50' : '#444') + ';' +
+                    'border-radius: 10px;' +
+                    'padding: 15px;' +
+                    'text-align: center;' +
+                    'cursor: pointer;' +
+                    'transition: all 0.3s ease;' +
+                '">' +
+                    '<div style="font-size: 40px; margin-bottom: 8px;">' + design.icon + '</div>' +
+                    '<div style="color: white; font-size: 13px; font-weight: bold;">' + design.name + '</div>' +
+                '</div>';
+            }
+            grid.innerHTML = html;
+            
+            // Update current design name
+            if (designs[currentDesign]) {
+                document.getElementById('current-design-name').textContent = designs[currentDesign].name;
+            }
+        }
+
+        function selectPieceDesign(design) {
+            if (window.socket) {
+                window.socket.emit('set_piece_design', { design: design });
+            }
+        }
+
+        window.isSeekingGame = false;
+
+        function seekGame() {
+            if (!window.socket || !window.socket.connected) {
+                console.log('Socket not ready, retrying...');
+                setTimeout(seekGame, 100);
+                return;
+            }
+
+            if (window.isSeekingGame) {
+                cancelSeek();
+                return;
+            }
+
+            const timeControlElement = document.getElementById('time-control');
+            if (!timeControlElement) {
+                console.error('Time control element not found');
+                return;
+            }
+
+            const timeControl = timeControlElement.value;
+            window.isSeekingGame = true;
+            updateSeekingStatus('Looking for opponent (' + timeControl + ')...', true);
+
+            window.socket.emit('seek_game', {
+                time_control: timeControl
+            });
+        }
+
+        function cancelSeek() {
+            if (!window.socket || !window.isSeekingGame) return;
+
+            window.socket.emit('cancel_seek');
+            window.isSeekingGame = false;
+            updateSeekingStatus('', false);
+
+            if (window.countdownInterval) {
+                clearInterval(window.countdownInterval);
+                window.countdownInterval = null;
+            }
+        }
+
+        function updateSeekingStatus(message, show, showCancel = true) {
+            const statusElement = document.getElementById('seeking-status');
+            if (!statusElement) return;
+
+            if (show) {
+                statusElement.style.display = 'block';
+                if (showCancel && window.isSeekingGame) {
+                    statusElement.innerHTML = message + ' <button onclick="cancelSeek()" class="btn" style="margin-left: 10px;">Cancel</button>';
+                } else {
+                    statusElement.innerHTML = message;
+                }
+            } else {
+                statusElement.style.display = 'none';
+                statusElement.innerHTML = '';
+            }
+        }
+
+        // Player display utility functions
+        function getUserData(username) {
+            // This function would fetch user data - for now return defaults
+            return {
+                color: '#c9c9c9',
+                bullet_rating: 1200,
+                blitz_rating: 1200
+            };
+        }
+
+        function getRatingType(timeControl) {
+            if (timeControl === '1+0' || timeControl === '1+1' || timeControl === '2+1') {
+                return 'bullet';
+            } else {
+                return 'blitz';
+            }
+        }
+
+        // Player search functionality
+        let searchTimeout;
+        function initializePlayerSearch() {
+            const searchInput = document.getElementById('player-search');
+            const searchResults = document.getElementById('search-results');
+            const mobileSearchInput = document.getElementById('mobile-player-search');
+            const mobileSearchResults = document.getElementById('mobile-search-results');
+
+            // Desktop search
+            if (searchInput && searchResults) {
+                searchInput.addEventListener('input', function(e) {
+                    const query = e.target.value.trim();
+                    handleSearchInput(query, searchResults);
+                });
+
+                // Hide results when clicking outside
+                document.addEventListener('click', function(e) {
+                    if (!e.target.closest('.search-container')) {
+                        searchResults.style.display = 'none';
+                    }
+                });
+            }
+
+            // Mobile search
+            if (mobileSearchInput && mobileSearchResults) {
+                mobileSearchInput.addEventListener('input', function(e) {
+                    const query = e.target.value.trim();
+                    handleSearchInput(query, mobileSearchResults, true);
+                });
+            }
+        }
+
+        function handleSearchInput(query, resultsContainer, isMobile = false) {
+            clearTimeout(searchTimeout);
+
+            if (query.length < 2) {
+                resultsContainer.style.display = 'none';
+                return;
+            }
+
+            searchTimeout = setTimeout(() => {
+                searchPlayers(query, resultsContainer, isMobile);
+            }, 300);
+        }
+
+        // Mobile search functions
+        function openMobileSearch() {
+            const overlay = document.getElementById('mobile-search-overlay');
+            const input = document.getElementById('mobile-player-search');
+
+            overlay.classList.add('active');
+            setTimeout(() => {
+                input.focus();
+            }, 100);
+
+            // Prevent body scrolling
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeMobileSearch() {
+            const overlay = document.getElementById('mobile-search-overlay');
+            const input = document.getElementById('mobile-player-search');
+            const results = document.getElementById('mobile-search-results');
+
+            overlay.classList.remove('active');
+            input.value = '';
+            results.style.display = 'none';
+
+            // Restore body scrolling
+            document.body.style.overflow = '';
+        }
+
+        function closeMobileSearchIfClickedOutside(event) {
+            if (event.target.id === 'mobile-search-overlay') {
+                closeMobileSearch();
+            }
+        }
+
+        // Mobile hamburger menu functions
+        function toggleMobileMenu() {
+            const menu = document.getElementById('mobile-menu');
+            const overlay = document.getElementById('mobile-menu-overlay');
+            
+            if (menu && overlay) {
+                menu.classList.toggle('active');
+                overlay.classList.toggle('active');
+                
+                if (menu.classList.contains('active')) {
+                    document.body.style.overflow = 'hidden';
+                } else {
+                    document.body.style.overflow = '';
+                }
+            }
+        }
+
+        function closeMobileMenu() {
+            const menu = document.getElementById('mobile-menu');
+            const overlay = document.getElementById('mobile-menu-overlay');
+            
+            if (menu && overlay) {
+                menu.classList.remove('active');
+                overlay.classList.remove('active');
+                document.body.style.overflow = '';
+            }
+        }
+
+        function searchPlayers(query, resultsContainer, isMobile = false) {
+            fetch(`/api/search_players?q=${encodeURIComponent(query)}`)
+                .then(response => response.json())
+                .then(players => {
+                    displaySearchResults(players, resultsContainer, isMobile);
+                })
+                .catch(error => {
+                    console.error('Search error:', error);
+                });
+        }
+
+        function displaySearchResults(players, resultsContainer, isMobile = false) {
+            if (!resultsContainer) return;
+
+            if (players.length === 0) {
+                resultsContainer.innerHTML = '<div style="padding: 15px; opacity: 0.6; text-align: center;">No players found</div>';
+            } else {
+                resultsContainer.innerHTML = players.map(player => {
+                    const title = player.title ? `<span style="color: ${player.title_color}; font-weight: bold;">${player.title}</span> ` : '';
+                    const clickHandler = isMobile ? `onclick="closeMobileSearch(); window.location.href='/profile/${encodeURIComponent(player.username)}'"` : `onclick="window.location.href='/profile/${encodeURIComponent(player.username)}'"`
+                    const padding = isMobile ? '15px' : '10px';
+                    const fontSize = isMobile ? '14px' : '12px';
+
+                    const bannedStyle = player.is_banned ? 'opacity: 0.6;' : '';
+                    const ratingLine = player.is_banned
+                        ? `<div style="font-size: ${fontSize}; color: #ff4444; font-weight: bold;"><i class="fas fa-ban" style="margin-right: 4px;"></i>BANNED</div>`
+                        : `<div style="font-size: ${fontSize}; opacity: 0.7;">Bullet: ${player.bullet_rating} | Blitz: ${player.blitz_rating}</div>`;
+
+                    return `
+                        <div style="padding: ${padding}; border-bottom: 1px solid #3c3c3c; cursor: pointer; transition: background 0.2s; ${bannedStyle}"
+                             onmouseover="this.style.background='rgba(240, 208, 96, 0.1)'"
+                             onmouseout="this.style.background='transparent'"
+                             ${clickHandler}>
+                            <div style="color: ${player.is_banned ? '#ff4444' : player.color}; font-weight: 600; font-size: ${isMobile ? '16px' : '14px'};">
+                                ${player.is_banned ? '<i class="fas fa-ban" style="margin-right: 4px; font-size: 11px;"></i>' : ''}${title}${player.username}
+                            </div>
+                            ${ratingLine}
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            resultsContainer.style.display = 'block';
+        }
+
+        // Notification Bell Functions
+        function initializeNotificationBell() {
+            console.log('Initializing notification bell...');
+            updateNotificationBell();
+            renderNotificationDropdown();
+        }
+
+        var unreadMessageCount = 0;
+        var unreadMessageSenders = [];
+        var pendingFriendRequests = [];
+        
+        function updateNotificationBell() {
+            Promise.all([
+                fetch('/api/unread-messages').then(r => r.json()),
+                fetch('/api/pending-friend-requests').then(r => r.json())
+            ]).then(function(results) {
+                var msgData = results[0];
+                var frData = results[1];
+                unreadMessageCount = msgData.count || 0;
+                unreadMessageSenders = msgData.senders || [];
+                pendingFriendRequests = frData.from_users || [];
+                var totalCount = pendingChallenges.size + unreadMessageCount + pendingFriendRequests.length;
+                var notificationCount = document.getElementById('notification-count');
+                if (notificationCount) {
+                    notificationCount.textContent = totalCount > 0 ? totalCount : '0';
+                    notificationCount.style.display = totalCount > 0 ? 'inline-block' : 'none';
+                }
+                console.log('Notification bell updated:', pendingChallenges.size, 'challenges,', unreadMessageCount, 'messages,', pendingFriendRequests.length, 'friend requests');
+                renderNotificationDropdown();
+            });
+        }
+
+        function renderNotificationDropdown() {
+            var dropdown = document.getElementById('notification-dropdown');
+            if (!dropdown) return;
+
+            var html = '';
+            
+            for (var i = 0; i < pendingFriendRequests.length; i++) {
+                var fromUser = pendingFriendRequests[i];
+                html += '<div class="notification-item" style="padding: 10px; border-bottom: 1px solid #3c3c3c; cursor: pointer;" onclick="window.location.href=\'/friends\'">' +
+                    '<div style="display:flex;align-items:center;gap:8px;"><i class="fas fa-user-plus" style="color:#4a9eff;"></i>' +
+                    '<span style="color:#c9c9c9;"><strong>' + fromUser + '</strong> sent you a friend request</span></div></div>';
+            }
+            
+            for (var j = 0; j < unreadMessageSenders.length; j++) {
+                var sender = unreadMessageSenders[j];
+                var msgText = sender.count > 1
+                    ? '<strong>' + sender.username + '</strong> sent you ' + sender.count + ' messages'
+                    : '<strong>' + sender.username + '</strong> sent you a message';
+                html += '<div class="notification-item" style="padding: 10px; border-bottom: 1px solid #3c3c3c; cursor: pointer;" onclick="window.location.href=\'/friends\'">' +
+                    '<div style="display:flex;align-items:center;gap:8px;"><i class="fas fa-comment" style="color:#28a745;"></i>' +
+                    '<span style="color:#c9c9c9;">' + msgText + '</span></div></div>';
+            }
+            
+            html += Array.from(pendingChallenges.values()).map(function(challenge) {
+                return '<div class="notification-item" style="padding: 10px; border-bottom: 1px solid #3c3c3c;">' +
+                    '<div class="message" style="color: #c9c9c9;">Challenge from ' + challenge.challenger + ' - ' + challenge.time_control + ' ' + challenge.game_type + '</div>' +
+                    '<div style="display: flex; justify-content: flex-end; gap: 5px;">' +
+                    '<button onclick="acceptChallenge(\'' + challenge.challenge_id + '\')" class="btn btn-success" style="padding: 5px 10px; font-size: 12px;">Accept</button>' +
+                    '<button onclick="declineChallenge(\'' + challenge.challenge_id + '\')" class="btn btn-danger" style="padding: 5px 10px; font-size: 12px;">Decline</button></div></div>';
+            }).join('');
+            
+            if (!html) {
+                html = '<div style="padding: 10px; opacity: 0.6;">No new notifications</div>';
+            }
+            
+            dropdown.innerHTML = html;
+        }
+
+        function toggleNotificationDropdown() {
+            var dropdown = document.getElementById('notification-dropdown');
+            if (!dropdown) return;
+            var isShowing = dropdown.classList.contains('show');
+            if (isShowing) {
+                dropdown.classList.remove('show');
+                unreadMessageSenders = [];
+                unreadMessageCount = 0;
+                pendingFriendRequests = [];
+                pendingChallenges.clear();
+                var notificationCount = document.getElementById('notification-count');
+                if (notificationCount) {
+                    notificationCount.textContent = '0';
+                    notificationCount.style.display = 'none';
+                }
+                renderNotificationDropdown();
+                fetch('/api/mark-notifications-read', {method: 'POST'}).catch(function(){});
+            } else {
+                dropdown.classList.add('show');
+            }
+        }
+
+        function updateFriendBadge() {
+            fetch('/api/pending-friend-requests')
+            .then(r => r.json())
+            .then(data => {
+                var badge = document.getElementById('friend-badge');
+                var mobileBadge = document.getElementById('mobile-friend-badge');
+                var count = data.count || 0;
+                
+                if (badge) {
+                    badge.textContent = count;
+                    badge.style.display = count > 0 ? 'inline-block' : 'none';
+                }
+                if (mobileBadge) {
+                    mobileBadge.textContent = count;
+                    mobileBadge.style.display = count > 0 ? 'inline-block' : 'none';
+                }
+            });
+        }
+
+        function registerGlobalSocketListeners() {
+            if (!window.socket) return;
+            if (window._globalListenersRegistered) return;
+            window._globalListenersRegistered = true;
+            
+            window.socket.on('friend_request', function(data) {
+                showFriendRequestPopup(data);
+                updateFriendBadge();
+            });
+            
+            window.socket.on('friend_accepted', function(data) {
+                showBriefNotification(data.message || 'Friend request accepted!', 'success');
+            });
+            
+            window.socket.on('private_message', function(data) {
+                showMessagePopup(data);
+                updateNotificationBell();
+            });
+            
+            window.socket.on('admin_announcement', function(data) {
+                console.log('Admin announcement received:', data);
+                showAdminAnnouncement(data);
+            });
+        }
+
+        function showAdminAnnouncement(data) {
+            var rankColors = {dragon: '#FFD700', galaxy: '#9B59B6', creator: '#00BFFF'};
+            var rankGlow = rankColors[data.admin_rank] || '#fff';
+            var nameColor = data.color_name || '#fff';
+            
+            var banner = document.createElement('div');
+            banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:20000;background:linear-gradient(135deg,#1a1a2e,#0a0a1a);color:#fff;padding:18px 25px;text-align:center;box-shadow:0 4px 25px ' + rankGlow + ',0 0 60px ' + rankGlow + '40;border-bottom:3px solid ' + rankGlow + ';animation:slideDown 0.3s ease-out;';
+            banner.innerHTML = '<div style="font-size:20px;line-height:1.4;"><span style="color:' + nameColor + ';font-weight:bold;text-shadow:0 0 10px ' + rankGlow + ';">' + data.username + '</span><span style="opacity:0.7;">: </span>' + data.message + '</div>';
+            
+            document.body.appendChild(banner);
+            
+            setTimeout(function() {
+                banner.style.animation = 'slideUp 0.3s ease-in';
+                setTimeout(function() { if (banner.parentNode) banner.remove(); }, 300);
+            }, 4000);
+        }
+
+        function showFriendRequestPopup(data) {
+            var container = document.getElementById('global-notifications');
+            if (!container) {
+                container = document.createElement('div');
+                container.id = 'global-notifications';
+                container.style.cssText = 'position:fixed;top:80px;right:20px;z-index:10002;display:flex;flex-direction:column;gap:10px;';
+                document.body.appendChild(container);
+            }
+            var popup = document.createElement('div');
+            popup.className = 'friend-request-popup';
+            popup.style.cssText = 'background:linear-gradient(135deg,#1a1a2e,#16213e);color:#fff;padding:15px 20px;border-radius:10px;box-shadow:0 5px 20px rgba(0,0,0,0.5);border:2px solid #4a9eff;animation:slideInRight 0.3s ease-out;min-width:280px;';
+            popup.innerHTML = '<div style="display:flex;align-items:center;gap:12px;"><i class="fas fa-user-plus" style="font-size:24px;color:#4a9eff;"></i><div><div style="font-weight:bold;font-size:14px;">Friend Request</div><div style="font-size:13px;opacity:0.9;margin-top:3px;">' + (data.from_user || 'Someone') + ' wants to be your friend!</div></div></div><div style="margin-top:12px;display:flex;gap:8px;justify-content:flex-end;"><button onclick="window.location.href=\'/friends\'" style="background:#4a9eff;color:#fff;border:none;padding:8px 16px;border-radius:5px;cursor:pointer;font-weight:bold;">View</button><button onclick="this.parentNode.parentNode.remove()" style="background:#3c3c3c;color:#fff;border:none;padding:8px 12px;border-radius:5px;cursor:pointer;">Dismiss</button></div>';
+            container.appendChild(popup);
+            setTimeout(function() { if (popup.parentNode) popup.remove(); }, 10000);
+        }
+
+        function showMessagePopup(data) {
+            var container = document.getElementById('global-notifications');
+            if (!container) {
+                container = document.createElement('div');
+                container.id = 'global-notifications';
+                container.style.cssText = 'position:fixed;top:80px;right:20px;z-index:10002;display:flex;flex-direction:column;gap:10px;';
+                document.body.appendChild(container);
+            }
+            var popup = document.createElement('div');
+            popup.className = 'message-popup';
+            popup.style.cssText = 'background:linear-gradient(135deg,#1a1a2e,#16213e);color:#fff;padding:15px 20px;border-radius:10px;box-shadow:0 5px 20px rgba(0,0,0,0.5);border:2px solid #28a745;animation:slideInRight 0.3s ease-out;min-width:280px;';
+            var msgPreview = data.message ? (data.message.length > 50 ? data.message.substring(0,50) + '...' : data.message) : '';
+            popup.innerHTML = '<div style="display:flex;align-items:center;gap:12px;"><i class="fas fa-comment" style="font-size:24px;color:#28a745;"></i><div><div style="font-weight:bold;font-size:14px;">New Message</div><div style="font-size:13px;opacity:0.9;margin-top:3px;">' + (data.from_user || 'Someone') + ' sent you a message</div>' + (msgPreview ? '<div style="font-size:12px;opacity:0.7;margin-top:5px;font-style:italic;">"' + msgPreview + '"</div>' : '') + '</div></div><div style="margin-top:12px;display:flex;gap:8px;justify-content:flex-end;"><button onclick="window.location.href=\'/friends\'" style="background:#28a745;color:#fff;border:none;padding:8px 16px;border-radius:5px;cursor:pointer;font-weight:bold;">Reply</button><button onclick="this.parentNode.parentNode.remove()" style="background:#3c3c3c;color:#fff;border:none;padding:8px 12px;border-radius:5px;cursor:pointer;">Dismiss</button></div>';
+            container.appendChild(popup);
+            setTimeout(function() { if (popup.parentNode) popup.remove(); }, 10000);
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            updateFriendBadge();
+        });
+
+        function acceptChallenge(challengeId) {
+            if (isInGame) {
+                showBriefNotification('Cannot accept challenge while in a game!', 'error');
+                return;
+            }
+
+            if (window.socket) {
+                window.socket.emit('accept_challenge', { challenge_id: challengeId });
+
+                // Remove from pending challenges
+                pendingChallenges.delete(challengeId);
+                updateNotificationBell();
+                renderNotificationDropdown();
+
+                showBriefNotification('Challenge accepted!', 'success');
+            }
+        }
+
+        function declineChallenge(challengeId) {
+            if (window.socket) {
+                window.socket.emit('decline_challenge', { challenge_id: challengeId });
+
+                // Remove from pending challenges
+                pendingChallenges.delete(challengeId);
+                updateNotificationBell();
+                renderNotificationDropdown();
+
+                showBriefNotification('Challenge declined', 'info');
+            }
+        }
+
+        function showBriefNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.style.cssText = `
+                position: fixed;
+                top: 80px;
+                right: 20px;
+                background: ${type === 'error' ? '#dc3545' : '#28a745'};
+                color: white;
+                padding: 10px 15px;
+                border-radius: 5px;
+                z-index: 10001;
+                animation: slideInRight 0.3s ease-out;
+                box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+            `;
+            notification.textContent = message;
+            document.body.appendChild(notification);
+
+            setTimeout(() => {
+                notification.style.animation = 'slideOutRight 0.3s ease-in';
+                setTimeout(() => {
+                    if (notification.parentNode) {
+                        notification.parentNode.removeChild(notification);
+                    }
+                }, 300);
+            }, 3000);
+        }
+
+        // Initialize socket when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeSocket();
+            initializePlayerSearch();
+
+            // Initialize notification system after socket is ready
+            setTimeout(function() {
+                initializeNotificationBell();
+            }, 500);
+
+            // Also try to initialize every second for first 10 seconds
+            let attempts = 0;
+            const challengeInitInterval = setInterval(function() {
+                attempts++;
+                if (window.socket && window.socket.connected) {
+                    initializeNotificationBell();
+                    clearInterval(challengeInitInterval);
+                } else if (attempts >= 10) {
+                    clearInterval(challengeInitInterval);
+                    console.log('Notification system: Failed to initialize after 10 attempts');
+                }
+            }, 1000);
+        });
+
+        // Admin Commands Modal Functions
+        function toggleAdminCommands() {
+            var adminModal = document.getElementById('admin-modal');
+            if (adminModal) {
+                var isOpening = adminModal.style.display === "none" || adminModal.style.display === "";
+                adminModal.style.display = isOpening ? "block" : "none";
+                if (isOpening) {
+                    showAllCommands();
+                }
+            }
+        }
+        
+        function openAdminCommands() {
+            var adminModal = document.getElementById('admin-modal');
+            if (adminModal) {
+                adminModal.style.display = 'block';
+                // Show all available commands immediately
+                showAllCommands();
+            }
+        }
+        
+        function showAllCommands() {
+            var responseDiv = document.getElementById('admin-response');
+            if (!responseDiv) return;
+            
+            responseDiv.innerHTML = '';
+            
+            // Create header
+            var header = document.createElement('div');
+            header.style.cssText = 'padding: 10px 15px; margin-bottom: 10px; font-weight: bold; color: #4CAF50; font-size: 16px; border-bottom: 1px solid rgba(255,255,255,0.1);';
+            header.innerHTML = '<i class="fas fa-terminal" style="margin-right: 8px;"></i>Available Commands (click to use)';
+            responseDiv.appendChild(header);
+            
+            // Show all commands
+            for (var cmd in adminCommands) {
+                var cmdDiv = document.createElement('div');
+                cmdDiv.className = 'command-item';
+                cmdDiv.style.cssText = 'padding: 12px 15px; margin: 5px 0; background: rgba(255,255,255,0.05); border-radius: 8px; cursor: pointer; transition: all 0.2s ease; border-left: 3px solid #4CAF50;';
+                
+                var cmdBase = cmd.split(' ')[0];
+                cmdDiv.setAttribute('data-cmd', cmdBase);
+                
+                cmdDiv.innerHTML = '<div style="font-weight: bold; color: #4CAF50; font-size: 14px; font-family: monospace;">' + cmd + '</div>' +
+                    '<div style="font-size: 12px; color: #888; margin-top: 4px;">' + adminCommands[cmd] + '</div>';
+                
+                cmdDiv.onmouseover = function() { 
+                    this.style.background = 'rgba(76,175,80,0.2)';
+                    this.style.transform = 'translateX(5px)';
+                };
+                cmdDiv.onmouseout = function() { 
+                    this.style.background = 'rgba(255,255,255,0.05)';
+                    this.style.transform = 'translateX(0)';
+                };
+                cmdDiv.onclick = function() {
+                    var cmdText = this.getAttribute('data-cmd');
+                    var input = document.getElementById('admin-command-input');
+                    if (input) {
+                        input.value = cmdText + ' ';
+                        input.focus();
+                    }
+                };
+                
+                responseDiv.appendChild(cmdDiv);
+            }
+        }
+
+        function closeAdminCommands() {
+            var adminModal = document.getElementById('admin-modal');
+            if (adminModal) {
+                adminModal.style.display = 'none';
+            }
+            // Hide suggestions and clear input
+            var suggestionsDiv = document.getElementById('admin-command-suggestions');
+            if (suggestionsDiv) suggestionsDiv.style.display = 'none';
+            var adminInput = document.getElementById('admin-command-input');
+            if (adminInput) adminInput.value = '';
+            // Clear response area
+            var responseDiv = document.getElementById('admin-response');
+            if (responseDiv) responseDiv.innerHTML = '';
+            selectedSuggestionIndex = -1;
+        }
+
+        var banlistData = null;
+        var banlistCurrentTab = 'recent';
+
+        function openBanlistModal() {
+            var modal = document.getElementById('banlist-modal');
+            if (modal) {
+                modal.style.display = 'block';
+                loadBanlistData();
+            }
+        }
+
+        function closeBanlistModal() {
+            var modal = document.getElementById('banlist-modal');
+            if (modal) modal.style.display = 'none';
+        }
+
+        function loadBanlistData() {
+            var content = document.getElementById('banlist-content');
+            if (content) content.innerHTML = '<div style="text-align: center; color: #888; padding: 40px;"><i class="fas fa-spinner fa-spin"></i> Loading...</div>';
+            fetch('/api/banlist')
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    banlistData = data;
+                    renderBanlistTab(banlistCurrentTab);
+                })
+                .catch(function() {
+                    if (content) content.innerHTML = '<div style="text-align: center; color: #ff4444; padding: 40px;">Failed to load ban list</div>';
+                });
+        }
+
+        function switchBanlistTab(tab) {
+            banlistCurrentTab = tab;
+            var recentBtn = document.getElementById('banlist-tab-recent');
+            var bannedBtn = document.getElementById('banlist-tab-banned');
+            if (tab === 'recent') {
+                recentBtn.style.background = '#ff4444';
+                recentBtn.style.color = 'white';
+                recentBtn.style.border = 'none';
+                bannedBtn.style.background = 'rgba(255, 68, 68, 0.2)';
+                bannedBtn.style.color = '#ff8888';
+                bannedBtn.style.border = '2px solid #ff4444';
+            } else {
+                bannedBtn.style.background = '#ff4444';
+                bannedBtn.style.color = 'white';
+                bannedBtn.style.border = 'none';
+                recentBtn.style.background = 'rgba(255, 68, 68, 0.2)';
+                recentBtn.style.color = '#ff8888';
+                recentBtn.style.border = '2px solid #ff4444';
+            }
+            if (banlistData) renderBanlistTab(tab);
+        }
+
+        function formatBanTime(isoStr) {
+            if (!isoStr) return 'Unknown';
+            var d = new Date(isoStr);
+            var now = new Date();
+            var diff = now - d;
+            var mins = Math.floor(diff / 60000);
+            var hrs = Math.floor(diff / 3600000);
+            var days = Math.floor(diff / 86400000);
+            if (mins < 1) return 'Just now';
+            if (mins < 60) return mins + 'm ago';
+            if (hrs < 24) return hrs + 'h ago';
+            if (days < 30) return days + 'd ago';
+            return d.toLocaleDateString();
+        }
+
+        function renderBanlistTab(tab) {
+            var content = document.getElementById('banlist-content');
+            if (!content || !banlistData) return;
+            var html = '';
+
+            if (tab === 'recent') {
+                var bans = banlistData.recent_bans || [];
+                if (bans.length === 0) {
+                    html = '<div style="text-align: center; color: #888; padding: 40px;"><i class="fas fa-check-circle" style="font-size: 40px; margin-bottom: 10px; display: block;"></i>No bans recorded yet</div>';
+                } else {
+                    for (var i = 0; i < bans.length; i++) {
+                        var ban = bans[i];
+                        var statusColor = ban.is_active ? '#ff4444' : '#44ff44';
+                        var statusText = ban.is_active ? 'ACTIVE' : 'UNBANNED';
+                        var statusIcon = ban.is_active ? 'fa-ban' : 'fa-check';
+                        html += '<div style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 68, 68, 0.3); border-radius: 10px; padding: 15px; margin-bottom: 10px;">';
+                        html += '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">';
+                        html += '<div style="font-size: 15px;">';
+                        html += '<span style="color: #ff8888; font-weight: bold;">' + ban.banned_by + '</span>';
+                        html += ' <span style="color: #888;">banned</span> ';
+                        html += '<span style="color: #fff; font-weight: bold;">' + ban.banned_user + '</span>';
+                        html += '</div>';
+                        html += '<span style="color: ' + statusColor + '; font-size: 12px; font-weight: bold; padding: 3px 8px; border: 1px solid ' + statusColor + '; border-radius: 12px;"><i class="fas ' + statusIcon + '"></i> ' + statusText + '</span>';
+                        html += '</div>';
+                        html += '<div style="color: #aaa; font-size: 13px; margin-bottom: 5px;"><i class="fas fa-comment" style="margin-right: 5px;"></i>Reason: ' + (ban.reason || 'No reason given') + '</div>';
+                        html += '<div style="color: #666; font-size: 12px;"><i class="fas fa-clock" style="margin-right: 5px;"></i>' + formatBanTime(ban.timestamp) + '</div>';
+                        if (!ban.is_active && ban.unbanned_by) {
+                            html += '<div style="color: #44ff44; font-size: 12px; margin-top: 5px;"><i class="fas fa-unlock" style="margin-right: 5px;"></i>Unbanned by ' + ban.unbanned_by + ' ' + formatBanTime(ban.unbanned_at) + '</div>';
+                        }
+                        html += '</div>';
+                    }
+                }
+            } else {
+                var banned = banlistData.banned_players || [];
+                if (banned.length === 0) {
+                    html = '<div style="text-align: center; color: #888; padding: 40px;"><i class="fas fa-smile" style="font-size: 40px; margin-bottom: 10px; display: block;"></i>No players currently banned</div>';
+                } else {
+                    for (var j = 0; j < banned.length; j++) {
+                        var b = banned[j];
+                        html += '<div style="background: rgba(255, 0, 0, 0.1); border: 1px solid rgba(255, 68, 68, 0.4); border-radius: 10px; padding: 15px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">';
+                        html += '<div>';
+                        html += '<div style="font-size: 16px; font-weight: bold; color: #fff; margin-bottom: 5px;"><i class="fas fa-ban" style="color: #ff4444; margin-right: 8px;"></i>' + b.banned_user + '</div>';
+                        html += '<div style="color: #aaa; font-size: 13px;">Banned by <span style="color: #ff8888; font-weight: bold;">' + b.banned_by + '</span></div>';
+                        html += '<div style="color: #888; font-size: 12px; margin-top: 3px;"><i class="fas fa-comment" style="margin-right: 5px;"></i>' + (b.reason || 'No reason given') + '</div>';
+                        html += '</div>';
+                        html += '<div style="color: #666; font-size: 12px; text-align: right;">' + formatBanTime(b.timestamp) + '</div>';
+                        html += '</div>';
+                    }
+                }
+            }
+            content.innerHTML = html;
+        }
+
+function executeAdminCommand() {
+            var command = document.getElementById('admin-command-input').value;
+            if (!command.trim()) return;
+
+            // Hide suggestions
+            var suggestionsDiv = document.getElementById('admin-command-suggestions');
+            if (suggestionsDiv) suggestionsDiv.style.display = 'none';
+
+            window.socket.emit('admin_command', { command: command });
+
+            // Clear input
+            document.getElementById('admin-command-input').value = '';
+
+            // Add command to response area
+            var responseDiv = document.getElementById('admin-response');
+            var cmdRow = document.createElement('div');
+            cmdRow.style.cssText = 'padding: 8px 12px; margin-bottom: 8px; background: rgba(255,255,255,0.1); border-left: 4px solid #888; border-radius: 4px; color: #aaa; font-family: monospace; font-size: 14px;';
+            cmdRow.innerHTML = '<i class="fas fa-terminal" style="margin-right: 8px; color: #666;"></i>' + command;
+            responseDiv.appendChild(cmdRow);
+            responseDiv.scrollTop = responseDiv.scrollHeight;
+        }
+
+        // Set up admin command listeners when socket is ready
+        function setupAdminListeners() {
+            if (!window.socket) return;
+
+            window.socket.on('admin_response', function(data) {
+                var responseDiv = document.getElementById('admin-response');
+                if (data.message) {
+                    // Create a message row
+                    var msgRow = document.createElement('div');
+                    msgRow.style.cssText = 'padding: 10px 15px; margin-bottom: 8px; background: rgba(40, 167, 69, 0.2); border-left: 4px solid #28a745; border-radius: 6px; color: #90EE90; font-size: 15px;';
+                    msgRow.innerHTML = '<i class="fas fa-check-circle" style="margin-right: 8px;"></i>' + data.message;
+                    responseDiv.appendChild(msgRow);
+                } else if (data.error) {
+                    // Create an error row
+                    var errorRow = document.createElement('div');
+                    errorRow.style.cssText = 'padding: 10px 15px; margin-bottom: 8px; background: rgba(220, 53, 69, 0.2); border-left: 4px solid #dc3545; border-radius: 6px; color: #ff6b6b; font-size: 15px;';
+                    errorRow.innerHTML = '<i class="fas fa-exclamation-circle" style="margin-right: 8px;"></i><strong>Error:</strong> ' + data.error;
+                    responseDiv.appendChild(errorRow);
+                } else if (data.commands) {
+                    // Create Roblox-style command list
+                    var headerRow = document.createElement('div');
+                    headerRow.style.cssText = 'padding: 15px; margin-bottom: 15px; background: linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05)); border-radius: 10px; text-align: center;';
+                    headerRow.innerHTML = '<h4 style="margin: 0; color: #fff; font-size: 18px;"><i class="fas fa-list-alt" style="margin-right: 10px;"></i>Available Commands</h4>';
+                    responseDiv.appendChild(headerRow);
+                    
+                    for (var cmd in data.commands) {
+                        var cmdRow = document.createElement('div');
+                        cmdRow.style.cssText = 'display: flex; flex-direction: column; padding: 12px 15px; margin-bottom: 10px; background: rgba(255,255,255,0.05); border-radius: 10px; border-left: 4px solid #4CAF50; transition: all 0.2s ease;';
+                        cmdRow.onmouseover = function() { this.style.background = 'rgba(255,255,255,0.1)'; this.style.transform = 'translateX(5px)'; };
+                        cmdRow.onmouseout = function() { this.style.background = 'rgba(255,255,255,0.05)'; this.style.transform = 'translateX(0)'; };
+                        
+                        var cmdName = document.createElement('div');
+                        cmdName.style.cssText = 'font-size: 17px; font-weight: bold; color: #4CAF50; margin-bottom: 5px; font-family: "Courier New", monospace;';
+                        cmdName.innerHTML = '<i class="fas fa-chevron-right" style="margin-right: 8px; font-size: 12px;"></i>' + cmd;
+                        
+                        var cmdDesc = document.createElement('div');
+                        cmdDesc.style.cssText = 'font-size: 14px; color: #ccc; padding-left: 20px;';
+                        cmdDesc.textContent = data.commands[cmd];
+                        
+                        cmdRow.appendChild(cmdName);
+                        cmdRow.appendChild(cmdDesc);
+                        responseDiv.appendChild(cmdRow);
+                    }
+                }
+                responseDiv.scrollTop = responseDiv.scrollHeight;
+            });
+
+            window.socket.on('admin_close', function() {
+                closeAdminCommands();
+            });
+
+            window.socket.on('open_banlist', function() {
+                openBanlistModal();
+            });
+        }
+
+        // Admin command autocomplete system
+        var adminCommands = {{ admin_commands_json | safe if admin_commands_json else '{}' }};
+        var selectedSuggestionIndex = -1;
+        
+        function updateCommandSuggestions(input) {
+            var suggestionsDiv = document.getElementById('admin-command-suggestions');
+            if (!suggestionsDiv) return;
+            
+            var inputValue = input.toLowerCase().trim();
+            
+            if (!inputValue) {
+                suggestionsDiv.style.display = 'none';
+                selectedSuggestionIndex = -1;
+                return;
+            }
+            
+            // Get matching commands
+            var matches = [];
+            for (var cmd in adminCommands) {
+                var cmdBase = cmd.split(' ')[0].toLowerCase();
+                if (cmdBase.startsWith(inputValue) || cmd.toLowerCase().includes(inputValue)) {
+                    matches.push({ cmd: cmd, desc: adminCommands[cmd] });
+                }
+            }
+            
+            if (matches.length === 0) {
+                suggestionsDiv.style.display = 'none';
+                selectedSuggestionIndex = -1;
+                return;
+            }
+            
+            // Build suggestions HTML
+            suggestionsDiv.innerHTML = '';
+            matches.forEach(function(match, index) {
+                var suggestionItem = document.createElement('div');
+                suggestionItem.className = 'admin-suggestion-item';
+                suggestionItem.setAttribute('data-index', index);
+                suggestionItem.style.cssText = 'padding: 10px 15px; cursor: pointer; border-bottom: 1px solid rgba(255,255,255,0.1); transition: background 0.15s ease;';
+                suggestionItem.innerHTML = '<div style="font-weight: bold; color: #4CAF50; font-size: 14px; font-family: monospace;">' + match.cmd + '</div>' +
+                    '<div style="font-size: 12px; color: #888; margin-top: 3px;">' + match.desc + '</div>';
+                
+                suggestionItem.onmouseover = function() { 
+                    this.style.background = 'rgba(255,255,255,0.15)';
+                    // Update selection
+                    var items = suggestionsDiv.querySelectorAll('.admin-suggestion-item');
+                    items.forEach(function(item) { item.style.background = ''; });
+                    this.style.background = 'rgba(255,255,255,0.15)';
+                    selectedSuggestionIndex = parseInt(this.getAttribute('data-index'));
+                };
+                suggestionItem.onmouseout = function() { 
+                    if (selectedSuggestionIndex !== parseInt(this.getAttribute('data-index'))) {
+                        this.style.background = '';
+                    }
+                };
+                suggestionItem.onclick = function() {
+                    var cmdText = match.cmd.split(' ')[0];
+                    document.getElementById('admin-command-input').value = cmdText + ' ';
+                    document.getElementById('admin-command-input').focus();
+                    suggestionsDiv.style.display = 'none';
+                    selectedSuggestionIndex = -1;
+                };
+                
+                suggestionsDiv.appendChild(suggestionItem);
+            });
+            
+            suggestionsDiv.style.display = 'block';
+            selectedSuggestionIndex = -1;
+        }
+        
+        function navigateSuggestions(direction) {
+            var suggestionsDiv = document.getElementById('admin-command-suggestions');
+            if (!suggestionsDiv || suggestionsDiv.style.display === 'none') return false;
+            
+            var items = suggestionsDiv.querySelectorAll('.admin-suggestion-item');
+            if (items.length === 0) return false;
+            
+            // Clear previous selection
+            items.forEach(function(item) { item.style.background = ''; });
+            
+            // Update index
+            if (direction === 'down') {
+                selectedSuggestionIndex = (selectedSuggestionIndex + 1) % items.length;
+            } else {
+                selectedSuggestionIndex = selectedSuggestionIndex <= 0 ? items.length - 1 : selectedSuggestionIndex - 1;
+            }
+            
+            // Highlight selected
+            items[selectedSuggestionIndex].style.background = 'rgba(255,255,255,0.15)';
+            items[selectedSuggestionIndex].scrollIntoView({ block: 'nearest' });
+            
+            return true;
+        }
+        
+        function selectCurrentSuggestion() {
+            var suggestionsDiv = document.getElementById('admin-command-suggestions');
+            if (!suggestionsDiv || suggestionsDiv.style.display === 'none' || selectedSuggestionIndex < 0) return false;
+            
+            var items = suggestionsDiv.querySelectorAll('.admin-suggestion-item');
+            if (selectedSuggestionIndex < items.length) {
+                items[selectedSuggestionIndex].click();
+                return true;
+            }
+            return false;
+        }
+
+        // Allow Enter key to execute commands
+        document.addEventListener('DOMContentLoaded', function() {
+            var adminInput = document.getElementById('admin-command-input');
+            if (adminInput) {
+                // Add input event for autocomplete
+                adminInput.addEventListener('input', function(e) {
+                    updateCommandSuggestions(this.value);
+                });
+                
+                // Handle keyboard navigation
+                adminInput.addEventListener('keydown', function(e) {
+                    if (e.key === 'ArrowDown') {
+                        if (navigateSuggestions('down')) {
+                            e.preventDefault();
+                        }
+                    } else if (e.key === 'ArrowUp') {
+                        if (navigateSuggestions('up')) {
+                            e.preventDefault();
+                        }
+                    } else if (e.key === 'Tab') {
+                        if (selectCurrentSuggestion()) {
+                            e.preventDefault();
+                        }
+                    } else if (e.key === 'Escape') {
+                        var suggestionsDiv = document.getElementById('admin-command-suggestions');
+                        if (suggestionsDiv) suggestionsDiv.style.display = 'none';
+                        selectedSuggestionIndex = -1;
+                    }
+                });
+                
+                adminInput.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        var suggestionsDiv = document.getElementById('admin-command-suggestions');
+                        if (suggestionsDiv) suggestionsDiv.style.display = 'none';
+                        executeAdminCommand();
+                    }
+                });
+            }
+        });
+
+        // Admin button drag functionality
+        let adminDrag = {
+            isDragging: false,
+            startX: 0,
+            startY: 0,
+            offsetX: 0,
+            offsetY: 0,
+            button: null,
+            holdTimer: null,
+            isHolding: false,
+            startTime: 0
+        };
+
+        function initializeAdminButtonDrag() {
+            const adminButton = document.getElementById('admin-button');
+            if (!adminButton) return;
+
+            adminDrag.button = adminButton;
+
+            // Mouse events
+            adminButton.addEventListener('mousedown', function(e) {
+                startAdminHold(e.clientX, e.clientY);
+            });
+
+            // Touch events
+            adminButton.addEventListener('touchstart', function(e) {
+                const touch = e.touches[0];
+                startAdminHold(touch.clientX, touch.clientY);
+            }, { passive: true });
+
+            // Global mouse events
+            document.addEventListener('mousemove', onAdminDrag);
+            document.addEventListener('mouseup', endAdminHold);
+
+            // Global touch events
+            document.addEventListener('touchmove', onAdminTouchDrag, { passive: false });
+            document.addEventListener('touchend', endAdminHold);
+        }
+
+        function startAdminHold(x, y) {
+            adminDrag.startX = x;
+            adminDrag.startY = y;
+            adminDrag.startTime = Date.now();
+            adminDrag.isHolding = true;
+            adminDrag.isDragging = false;
+            adminDrag.hasMoved = false;
+
+            const rect = adminDrag.button.getBoundingClientRect();
+            adminDrag.offsetX = x - rect.left;
+            adminDrag.offsetY = y - rect.top;
+        }
+
+        function onAdminDrag(e) {
+            if (!adminDrag.isHolding) return;
+            
+            const dx = Math.abs(e.clientX - adminDrag.startX);
+            const dy = Math.abs(e.clientY - adminDrag.startY);
+            
+            // If moved more than 5px, start dragging
+            if (!adminDrag.isDragging && (dx > 5 || dy > 5)) {
+                adminDrag.isDragging = true;
+                adminDrag.hasMoved = true;
+                
+                // Visual feedback that dragging is active
+                adminDrag.button.style.opacity = '0.8';
+                adminDrag.button.style.transform = 'scale(1.05)';
+                adminDrag.button.style.cursor = 'grabbing';
+                adminDrag.button.style.zIndex = '10000';
+            }
+            
+            if (adminDrag.isDragging) {
+                e.preventDefault();
+                moveAdminButton(e.clientX, e.clientY);
+            }
+        }
+
+        function onAdminTouchDrag(e) {
+            if (!adminDrag.isHolding) return;
+            
+            const touch = e.touches[0];
+            const dx = Math.abs(touch.clientX - adminDrag.startX);
+            const dy = Math.abs(touch.clientY - adminDrag.startY);
+            
+            // If moved more than 5px, start dragging
+            if (!adminDrag.isDragging && (dx > 5 || dy > 5)) {
+                adminDrag.isDragging = true;
+                adminDrag.hasMoved = true;
+                
+                // Visual feedback that dragging is active
+                adminDrag.button.style.opacity = '0.8';
+                adminDrag.button.style.transform = 'scale(1.05)';
+                adminDrag.button.style.cursor = 'grabbing';
+                adminDrag.button.style.zIndex = '10000';
+            }
+            
+            if (adminDrag.isDragging) {
+                e.preventDefault();
+                moveAdminButton(touch.clientX, touch.clientY);
+            }
+        }
+
+        function moveAdminButton(x, y) {
+            const newX = x - adminDrag.offsetX;
+            const newY = y - adminDrag.offsetY;
+
+            // Keep button within viewport bounds
+            const viewportWidth = window.innerWidth;
+            const viewportHeight = window.innerHeight;
+            const buttonRect = adminDrag.button.getBoundingClientRect();
+
+            const clampedX = Math.max(0, Math.min(newX, viewportWidth - buttonRect.width));
+            const clampedY = Math.max(0, Math.min(newY, viewportHeight - buttonRect.height));
+
+            adminDrag.button.style.left = clampedX + 'px';
+            adminDrag.button.style.top = clampedY + 'px';
+            adminDrag.button.style.right = 'auto';
+            adminDrag.button.style.bottom = 'auto';
+        }
+
+        function endAdminHold() {
+            if (!adminDrag.isHolding) return;
+            
+            if (adminDrag.isDragging) {
+                // End dragging - don't open panel
+                adminDrag.button.style.opacity = '1';
+                adminDrag.button.style.transform = 'scale(1)';
+                adminDrag.button.style.cursor = 'pointer';
+                adminDrag.button.style.zIndex = '999';
+            } else if (!adminDrag.hasMoved) {
+                // It was a click (no movement), open admin commands
+                toggleAdminCommands();
+            }
+
+            adminDrag.isHolding = false;
+            adminDrag.isDragging = false;
+            adminDrag.hasMoved = false;
+        }
+
+        // Initialize admin button drag after DOM is ready
+        document.addEventListener('DOMContentLoaded', initializeAdminButtonDrag);
+    </script>
+</body>
+</html>

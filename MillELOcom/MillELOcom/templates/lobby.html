@@ -1,0 +1,686 @@
+{% extends "base.html" %}
+
+{% block title %}Lobby - MillELO.com{% endblock %}
+
+{% block content %}
+<div style="text-align: center; margin-bottom: 20px;">
+    <div style="display: inline-block; background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%); padding: 12px 25px; border-radius: 25px; box-shadow: 0 4px 15px rgba(39, 174, 96, 0.3);">
+        <i class="fas fa-users" style="margin-right: 8px;"></i>
+        <span id="lobby-online-count" style="font-weight: bold; font-size: 16px;">0</span> Players Online
+    </div>
+</div>
+
+<div class="grid grid-2">
+    <div>
+        <div class="card">
+            <h3><i class="fas fa-play"></i> Quick Play</h3>
+            <p style="margin-bottom: 20px;">Find an opponent and start playing!</p>
+
+            <div style="margin-bottom: 15px;">
+                <label>Time Control:</label>
+                <select id="time-control" style="width: 100%; padding: 8px; background: #161512; border: 1px solid #3c3c3c; color: #c9c9c9; border-radius: 3px;">
+                    <option value="1+0">Bullet (1+0)</option>
+                    <option value="3+2" selected>Blitz (3+2)</option>
+                    <option value="5+3">Blitz (5+3)</option>
+                </select>
+            </div>
+
+            <button onclick="seekGame()" class="btn" style="width: 100%;">
+                <i class="fas fa-search"></i> Find Opponent
+            </button>
+
+            <div id="seeking-status" style="display: none; text-align: center; margin-top: 15px;">
+                <i class="fas fa-spinner fa-spin"></i> Looking for opponent...
+            </div>
+        </div>
+
+        {% if session.username %}
+        <div class="card" style="margin-top: 20px;">
+            <h3><i class="fas fa-chart-bar"></i> Your Statistics</h3>
+            <div style="margin-top: 15px;">
+                <h4 style="color: #ff6b35; margin-bottom: 10px;">
+                    <i class="fas fa-zap"></i> Bullet ({{ users[session.username].bullet_rating }})
+                    {% if users[session.username].admin_rank == 'admin' %}
+                    <span class="admin-crown-badge" style="display: inline-block; margin-left: 8px; position: relative;">
+                        <i class="fas fa-crown" style="color: #1a1a1a; text-shadow: 0 0 2px #fff, 0 0 4px #fff, 0 0 15px rgba(0,0,0,0.95), 0 0 25px rgba(0,0,0,0.85), 0 0 40px rgba(0,0,0,0.7); font-size: 14px;"></i>
+                    </span>
+                    {% elif users[session.username].admin_rank == 'dragon' %}
+                    <span class="dragon-badge" style="display: inline-block; margin-left: 8px; position: relative;">
+                        <i class="fas fa-dragon" style="color: #FFD700; text-shadow: 0 0 10px #FF8C00, 0 0 20px #FF4500, 0 0 30px #FF6600; font-size: 14px;"></i>
+                    </span>
+                    {% elif users[session.username].admin_rank == 'galaxy' %}
+                    <span class="galaxy-badge" style="display: inline-block; margin-left: 8px; position: relative;">
+                        <span class="galaxy-black-hole galaxy-black-hole-md"></span>
+                    </span>
+                    {% endif %}
+                </h4>
+                <div class="grid grid-3" style="margin-bottom: 20px;">
+                    <div style="text-align: center;">
+                        <div style="font-size: 20px; font-weight: bold; color: #28a745;">{{ users[session.username].wins.bullet }}</div>
+                        <div style="color: #28a745;">Wins</div>
+                    </div>
+                    <div style="text-align: center;">
+                        <div style="font-size: 20px; font-weight: bold; color: #dc3545;">{{ users[session.username].losses.bullet }}</div>
+                        <div style="color: #dc3545;">Losses</div>
+                    </div>
+                    <div style="text-align: center;">
+                        <div style="font-size: 20px; font-weight: bold; color: #ffc107;">{{ users[session.username].draws.bullet }}</div>
+                        <div style="color: #ffc107;">Draws</div>
+                    </div>
+                </div>
+
+                <h4 style="color: #f0d060; margin-bottom: 10px;">
+                    <i class="fas fa-bolt"></i> Blitz ({{ users[session.username].blitz_rating }})
+                    {% if users[session.username].admin_rank == 'admin' %}
+                    <span class="admin-crown-badge" style="display: inline-block; margin-left: 8px; position: relative;">
+                        <i class="fas fa-crown" style="color: #1a1a1a; text-shadow: 0 0 2px #fff, 0 0 4px #fff, 0 0 15px rgba(0,0,0,0.95), 0 0 25px rgba(0,0,0,0.85), 0 0 40px rgba(0,0,0,0.7); font-size: 14px;"></i>
+                    </span>
+                    {% elif users[session.username].admin_rank == 'dragon' %}
+                    <span class="dragon-badge" style="display: inline-block; margin-left: 8px; position: relative;">
+                        <i class="fas fa-dragon" style="color: #FFD700; text-shadow: 0 0 10px #FF8C00, 0 0 20px #FF4500, 0 0 30px #FF6600; font-size: 14px;"></i>
+                    </span>
+                    {% elif users[session.username].admin_rank == 'galaxy' %}
+                    <span class="galaxy-badge" style="display: inline-block; margin-left: 8px; position: relative;">
+                        <span class="galaxy-black-hole galaxy-black-hole-md"></span>
+                    </span>
+                    {% endif %}
+                </h4>
+                <div class="grid grid-3">
+                    <div style="text-align: center;">
+                        <div style="font-size: 20px; font-weight: bold; color: #28a745;">{{ users[session.username].wins.blitz }}</div>
+                        <div style="color: #28a745;">Wins</div>
+                    </div>
+                    <div style="text-align: center;">
+                        <div style="font-size: 20px; font-weight: bold; color: #dc3545;">{{ users[session.username].losses.blitz }}</div>
+                        <div style="color: #dc3545;">Losses</div>
+                    </div>
+                    <div style="text-align: center;">
+                        <div style="font-size: 20px; font-weight: bold; color: #ffc107;">{{ users[session.username].draws.blitz }}</div>
+                        <div style="color: #ffc107;">Draws</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+
+    </div>
+
+    <div>
+        <div class="card" style="margin-bottom: 20px;" id="featured-game-card">
+            <h3><i class="fas fa-tv"></i> Featured Game</h3>
+            <div id="featured-game-content">
+                <div id="featured-game-empty" style="text-align: center; padding: 30px; color: #888;">
+                    <i class="fas fa-chess-board" style="font-size: 40px; margin-bottom: 15px; opacity: 0.5;"></i>
+                    <p>No live games right now</p>
+                    <p style="font-size: 12px; opacity: 0.7;">Start a game to get featured!</p>
+                </div>
+                <div id="featured-game-display" style="display: none;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px;">
+                        <div style="flex: 1;">
+                            <div id="featured-white-player" style="display: flex; align-items: center; margin-bottom: 8px;">
+                                <span id="featured-white-title" class="player-title" style="display: none; font-size: 10px; padding: 1px 4px; border-radius: 2px; margin-right: 5px;"></span>
+                                <a id="featured-white-name" href="#" style="color: #fff; text-decoration: none; font-weight: bold; font-size: 13px;"></a>
+                                <span id="featured-white-rating" style="color: #888; font-size: 12px; margin-left: 5px;"></span>
+                            </div>
+                            <div id="featured-white-timer" style="font-family: monospace; font-size: 18px; font-weight: bold; color: #fff; background: #333; padding: 4px 8px; border-radius: 3px; display: inline-block;">0:00</div>
+                        </div>
+                        <div id="featured-mini-board" onclick="watchFeaturedGame()" style="width: 120px; height: 120px; background: #2d2a24; border-radius: 5px; cursor: pointer; position: relative; margin: 0 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.3);" title="Click to spectate">
+                        </div>
+                        <div style="flex: 1; text-align: right;">
+                            <div id="featured-black-player" style="display: flex; align-items: center; justify-content: flex-end; margin-bottom: 8px;">
+                                <span id="featured-black-title" class="player-title" style="display: none; font-size: 10px; padding: 1px 4px; border-radius: 2px; margin-right: 5px;"></span>
+                                <a id="featured-black-name" href="#" style="color: #888; text-decoration: none; font-weight: bold; font-size: 13px;"></a>
+                                <span id="featured-black-rating" style="color: #888; font-size: 12px; margin-left: 5px;"></span>
+                            </div>
+                            <div id="featured-black-timer" style="font-family: monospace; font-size: 18px; font-weight: bold; color: #888; background: #333; padding: 4px 8px; border-radius: 3px; display: inline-block;">0:00</div>
+                        </div>
+                    </div>
+                    <div style="text-align: center; padding: 5px;">
+                        <span id="featured-time-control" style="font-size: 11px; color: #888;"></span>
+                        <span style="margin: 0 8px; color: #555;">|</span>
+                        <span style="font-size: 11px; color: #f0d060;"><i class="fas fa-eye"></i> Click board to spectate</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3><i class="fas fa-trophy"></i> Tournaments</h3>
+            <p style="margin-bottom: 15px;">Compete in tournaments and climb the leaderboards!</p>
+            <a href="{{ url_for('tournaments_page') }}" class="btn" style="width: 100%;">
+                <i class="fas fa-list"></i> View Tournaments
+            </a>
+        </div>
+
+        <div class="card">
+            <h3><i class="fas fa-chart-line"></i> Leaderboards</h3>
+            <div style="margin-bottom: 20px; display: flex; flex-wrap: wrap; gap: 10px;">
+                <button onclick="showLeaderboard('bullet')" class="btn" style="padding: 12px 20px; font-size: 16px;">Bullet</button>
+                <button onclick="showLeaderboard('blitz')" class="btn" style="padding: 12px 20px; font-size: 16px;">Blitz</button>
+                <a href="{{ url_for('leaderboard_page') }}" class="btn" style="padding: 12px 20px; font-size: 16px; background: linear-gradient(135deg, #667eea, #764ba2); text-decoration: none;">
+                    <i class="fas fa-external-link-alt"></i> Full View
+                </a>
+            </div>
+            <h4 id="leaderboard-title" style="color: #f0d060; margin-bottom: 15px; font-size: 18px;">
+                <i class="fas fa-bolt"></i> Bullet Leaderboard
+            </h4>
+            <div id="leaderboard" style="min-height: 400px;">
+                <div style="text-align: center; opacity: 0.6;">
+                    <i class="fas fa-spinner fa-spin"></i> Loading leaderboard...
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    var currentFeaturedGameId = null;
+    var featuredTimerInterval = null;
+    var featuredWhiteTime = 0;
+    var featuredBlackTime = 0;
+    var featuredActivePlayer = 'white';
+    
+    var MILL_BOARD_POSITIONS = [
+        {x: 15, y: 15}, {x: 60, y: 15}, {x: 105, y: 15},
+        {x: 30, y: 30}, {x: 60, y: 30}, {x: 90, y: 30},
+        {x: 45, y: 45}, {x: 60, y: 45}, {x: 75, y: 45},
+        {x: 15, y: 60}, {x: 30, y: 60}, {x: 45, y: 60},
+        {x: 75, y: 60}, {x: 90, y: 60}, {x: 105, y: 60},
+        {x: 45, y: 75}, {x: 60, y: 75}, {x: 75, y: 75},
+        {x: 30, y: 90}, {x: 60, y: 90}, {x: 90, y: 90},
+        {x: 15, y: 105}, {x: 60, y: 105}, {x: 105, y: 105}
+    ];
+
+    function watchGame(gameId) {
+        window.location.href = '/play/' + gameId + '?spectate=true';
+    }
+    
+    function watchFeaturedGame() {
+        if (currentFeaturedGameId) {
+            window.location.href = '/play/' + currentFeaturedGameId + '?spectate=true';
+        }
+    }
+    
+    function formatTime(seconds) {
+        var mins = Math.floor(seconds / 60);
+        var secs = seconds % 60;
+        return mins + ':' + (secs < 10 ? '0' : '') + secs;
+    }
+    
+    function drawFeaturedMiniBoard(board) {
+        var container = document.getElementById('featured-mini-board');
+        if (!container) return;
+        
+        container.innerHTML = '';
+        
+        var svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        svg.setAttribute('width', '120');
+        svg.setAttribute('height', '120');
+        svg.setAttribute('viewBox', '0 0 120 120');
+        svg.style.pointerEvents = 'none';
+        
+        var lineColor = '#555';
+        var lines = [
+            '15,15 105,15', '105,15 105,105', '105,105 15,105', '15,105 15,15',
+            '30,30 90,30', '90,30 90,90', '90,90 30,90', '30,90 30,30',
+            '45,45 75,45', '75,45 75,75', '75,75 45,75', '45,75 45,45',
+            '60,15 60,45', '75,60 105,60', '60,75 60,105', '15,60 45,60'
+        ];
+        
+        lines.forEach(function(points) {
+            var line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            var coords = points.split(' ');
+            var start = coords[0].split(',');
+            var end = coords[1].split(',');
+            line.setAttribute('x1', start[0]);
+            line.setAttribute('y1', start[1]);
+            line.setAttribute('x2', end[0]);
+            line.setAttribute('y2', end[1]);
+            line.setAttribute('stroke', lineColor);
+            line.setAttribute('stroke-width', '1');
+            svg.appendChild(line);
+        });
+        
+        for (var i = 0; i < 24; i++) {
+            var pos = MILL_BOARD_POSITIONS[i];
+            
+            var point = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            point.setAttribute('cx', pos.x);
+            point.setAttribute('cy', pos.y);
+            point.setAttribute('r', '3');
+            point.setAttribute('fill', '#444');
+            svg.appendChild(point);
+            
+            if (board && board[i]) {
+                var piece = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                piece.setAttribute('cx', pos.x);
+                piece.setAttribute('cy', pos.y);
+                piece.setAttribute('r', '6');
+                var isWhite = board[i] === 'white' || board[i] === 1;
+                piece.setAttribute('fill', isWhite ? '#fff' : '#333');
+                piece.setAttribute('stroke', isWhite ? '#ccc' : '#666');
+                piece.setAttribute('stroke-width', '1');
+                svg.appendChild(piece);
+            }
+        }
+        
+        container.appendChild(svg);
+    }
+    
+    function updateFeaturedTimers() {
+        if (featuredActivePlayer === 'white' && featuredWhiteTime > 0) {
+            featuredWhiteTime--;
+        } else if (featuredActivePlayer === 'black' && featuredBlackTime > 0) {
+            featuredBlackTime--;
+        }
+        
+        var whiteTimer = document.getElementById('featured-white-timer');
+        var blackTimer = document.getElementById('featured-black-timer');
+        
+        if (whiteTimer) {
+            whiteTimer.textContent = formatTime(featuredWhiteTime);
+            whiteTimer.style.color = featuredActivePlayer === 'white' ? '#f0d060' : '#fff';
+        }
+        if (blackTimer) {
+            blackTimer.textContent = formatTime(featuredBlackTime);
+            blackTimer.style.color = featuredActivePlayer === 'black' ? '#f0d060' : '#888';
+        }
+    }
+    
+    function updateFeaturedGame(data) {
+        if (!data || !data.game_id) {
+            document.getElementById('featured-game-empty').style.display = 'block';
+            document.getElementById('featured-game-display').style.display = 'none';
+            currentFeaturedGameId = null;
+            if (featuredTimerInterval) {
+                clearInterval(featuredTimerInterval);
+                featuredTimerInterval = null;
+            }
+            return;
+        }
+        
+        currentFeaturedGameId = data.game_id;
+        
+        document.getElementById('featured-game-empty').style.display = 'none';
+        document.getElementById('featured-game-display').style.display = 'block';
+        
+        var whiteTitle = document.getElementById('featured-white-title');
+        if (data.white_title) {
+            whiteTitle.textContent = data.white_title;
+            whiteTitle.style.background = data.white_title_color || '#666';
+            whiteTitle.style.display = 'inline-block';
+        } else {
+            whiteTitle.style.display = 'none';
+        }
+        
+        var whiteName = document.getElementById('featured-white-name');
+        whiteName.textContent = data.white;
+        whiteName.style.color = data.white_color || '#fff';
+        whiteName.href = '/profile/' + data.white;
+        
+        document.getElementById('featured-white-rating').textContent = '(' + data.white_rating + ')';
+        
+        var blackTitle = document.getElementById('featured-black-title');
+        if (data.black_title) {
+            blackTitle.textContent = data.black_title;
+            blackTitle.style.background = data.black_title_color || '#666';
+            blackTitle.style.display = 'inline-block';
+        } else {
+            blackTitle.style.display = 'none';
+        }
+        
+        var blackName = document.getElementById('featured-black-name');
+        blackName.textContent = data.black;
+        blackName.style.color = data.black_color || '#888';
+        blackName.href = '/profile/' + data.black;
+        
+        document.getElementById('featured-black-rating').textContent = '(' + data.black_rating + ')';
+        
+        document.getElementById('featured-time-control').textContent = data.time_control;
+        
+        featuredWhiteTime = data.white_time || 0;
+        featuredBlackTime = data.black_time || 0;
+        featuredActivePlayer = data.current_player || 'white';
+        
+        document.getElementById('featured-white-timer').textContent = formatTime(featuredWhiteTime);
+        document.getElementById('featured-black-timer').textContent = formatTime(featuredBlackTime);
+        
+        drawFeaturedMiniBoard(data.board);
+        
+        if (!featuredTimerInterval) {
+            featuredTimerInterval = setInterval(updateFeaturedTimers, 1000);
+        }
+    }
+    
+    function requestFeaturedGame() {
+        if (window.socket && window.socket.connected) {
+            window.socket.emit('get_featured_game');
+        }
+    }
+
+    function showLeaderboard(type) {
+        // Update the title
+        const titleEl = document.getElementById('leaderboard-title');
+        if (type === 'bullet') {
+            titleEl.innerHTML = '<i class="fas fa-bolt"></i> Bullet Leaderboard';
+        } else {
+            titleEl.innerHTML = '<i class="fas fa-clock"></i> Blitz Leaderboard';
+        }
+        
+        fetch(`/api/leaderboard/${type}`)
+            .then(response => response.json())
+            .then(data => {
+                const container = document.getElementById('leaderboard');
+                container.innerHTML = data.slice(0, 10).map((player, index) => {
+                    let titleDisplay = '';
+                        if (player.title) {
+                            titleDisplay = `<span class="player-title" style="background: ${player.title_color}; color: #fff; font-size: 12px; padding: 2px 6px; border-radius: 3px; font-weight: bold; margin-right: 8px; display: inline-block;">${player.title}</span>`;
+                        }
+                    // Ranking badges are now only shown on profile page
+                    let adminCrownDisplay = '';
+                    let adminNameStyle = '';
+                    if (player.admin_rank === 'admin') {
+                        adminCrownDisplay = `<i class="fas fa-crown" style="color: #1a1a1a; text-shadow: 0 0 2px #fff, 0 0 4px #fff, 0 0 15px rgba(0,0,0,0.95), 0 0 25px rgba(0,0,0,0.85), 0 0 40px rgba(0,0,0,0.7); font-size: 12px; margin-right: 6px;"></i>`;
+                        adminNameStyle = 'text-shadow: 0 0 15px rgba(0,0,0,1), 0 0 25px rgba(0,0,0,0.9), 0 0 40px rgba(0,0,0,0.8);';
+                    } else if (player.admin_rank === 'dragon') {
+                        adminCrownDisplay = `<i class="fas fa-dragon" style="color: #FFD700; text-shadow: 0 0 10px #FF8C00, 0 0 20px #FF4500, 0 0 30px #FF6600; font-size: 12px; margin-right: 6px;"></i>`;
+                        adminNameStyle = 'text-shadow: 0 0 8px #FFD700, 0 0 12px #FFD700, 0 0 18px #FF8C00, 0 0 25px #FF8C00;';
+                    } else if (player.admin_rank === 'galaxy') {
+                        adminCrownDisplay = `<span class="galaxy-black-hole galaxy-black-hole-sm" style="margin-right: 6px;"></span>`;
+                        adminNameStyle = 'text-shadow: 0 0 8px #9400D3, 0 0 15px #8A2BE2, 0 0 25px #4B0082, 0 0 35px #9400D3;';
+                    } else if (player.admin_rank === 'creator') {
+                        adminCrownDisplay = '';
+                        adminNameStyle = '';
+                    }
+                    
+                    let playerNameHtml;
+                    if (player.admin_rank === 'creator') {
+                        playerNameHtml = `<a href="/profile/${player.username}" style="text-decoration: none;"><span class="creator-cloud-aura creator-cloud-aura-sm">${player.username}</span></a>`;
+                    } else {
+                        playerNameHtml = `<a href="/profile/${player.username}" style="color: ${player.color}; text-decoration: none; font-weight: bold; font-size: 18px; ${adminNameStyle}">${player.username}</a>`;
+                    }
+                    
+                    return `
+                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 15px 10px; border-bottom: 1px solid #3c3c3c; transition: background-color 0.2s;" onmouseover="this.style.backgroundColor='rgba(240, 208, 96, 0.1)'" onmouseout="this.style.backgroundColor='transparent'">
+                            <div style="display: flex; align-items: center;">
+                                <span style="font-weight: bold; margin-right: 15px; color: #f0d060; font-size: 20px; min-width: 30px;">${index + 1}.</span>
+                                ${titleDisplay}${adminCrownDisplay}${playerNameHtml}
+                            </div>
+                            <div style="text-align: right;">
+                                <div style="font-size: 22px; font-weight: bold; color: #f0d060;">${player.rating}</div>
+                                <small style="opacity: 0.7; font-size: 14px;">${player.games_played} games</small>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            });
+    }
+
+    
+
+    function showRejoinMessage(opponent) {
+        // Create overlay
+        const overlay = document.createElement('div');
+        overlay.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+            font-family: Arial, sans-serif;
+        `;
+
+        // Create message box
+        const messageBox = document.createElement('div');
+        messageBox.style.cssText = `
+            background: #2d2a24;
+            border: 2px solid #f0d060;
+            border-radius: 8px;
+            padding: 30px 40px;
+            text-align: center;
+            color: white;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+            animation: fadeInScale 0.3s ease-out;
+        `;
+
+        messageBox.innerHTML = `
+            <style>
+                @keyframes fadeInScale {
+                    0% {
+                        opacity: 0;
+                        transform: scale(0.8);
+                    }
+                    100% {
+                        opacity: 1;
+                        transform: scale(1);
+                    }
+                }
+            </style>
+            <i class="fas fa-chess-board" style="font-size: 36px; color: #f0d060; margin-bottom: 15px;"></i>
+            <h3 style="margin: 0 0 10px 0; color: #f0d060;">Active Game Found!</h3>
+            <p style="margin: 0 0 15px 0; font-size: 16px;">
+                Rejoining your game vs <strong style="color: #f0d060;">${opponent}</strong>
+            </p>
+            <div style="display: flex; align-items: center; justify-content: center;">
+                <i class="fas fa-spinner fa-spin" style="margin-right: 10px; color: #f0d060;"></i>
+                <span style="color: #ccc;">Teleporting...</span>
+            </div>
+        `;
+
+        overlay.appendChild(messageBox);
+        document.body.appendChild(overlay);
+
+        // Auto-remove after redirect
+        setTimeout(function() {
+            if (overlay.parentNode) {
+                overlay.parentNode.removeChild(overlay);
+            }
+        }, 1000);
+    }
+
+    // Show bullet leaderboard by default
+    showLeaderboard('bullet');
+
+    // Track if lobby handlers are already set up
+    var lobbyHandlersRegistered = false;
+    
+    // Register lobby-specific handlers on the socket
+    function registerLobbyHandlers() {
+        if (!window.socket || lobbyHandlersRegistered) {
+            return false;
+        }
+        
+        lobbyHandlersRegistered = true;
+        console.log('Registering lobby socket handlers on socket...');
+        
+        // Set up active game detection handler (live games style)
+        window.socket.on('active_game_found', function(data) {
+            console.log('Active game found in lobby:', data.room_id, 'Opponent:', data.opponent);
+            showRejoinMessage(data.opponent);
+            setTimeout(function() {
+                window.location.href = '/play?room=' + data.room_id;
+            }, 800);
+        });
+
+        window.socket.on('no_active_game', function(data) {
+            console.log('No active game found in lobby');
+        });
+        
+        // Featured game handler - critical for lobby display
+        window.socket.on('featured_game_update', function(data) {
+            console.log('*** Featured game update received ***', data);
+            updateFeaturedGame(data);
+        });
+
+        // Tournament game start - instant teleportation like Lichess
+        window.socket.on('tournament_game_start', function(data) {
+            console.log('Tournament game starting:', data);
+            if (data.room_id) {
+                window.location.href = '/play?room=' + data.room_id;
+            }
+        });
+
+        console.log('Lobby handlers registered successfully');
+        return true;
+    }
+    
+    // Join lobby room and set up handlers
+    function joinLobbyRoom() {
+        if (window.socket && window.socket.connected) {
+            console.log('Joining lobby room...');
+            window.socket.emit('join_lobby');
+            window.socket.emit('check_active_game', { watching: false });
+        }
+    }
+
+    // Wait for base.html's socket to be ready, then register handlers
+    function initLobbySocket() {
+        console.log('initLobbySocket called, window.socket exists:', !!window.socket, 'connected:', window.socket ? window.socket.connected : 'N/A');
+        
+        if (window.socket) {
+            registerLobbyHandlers();
+            
+            // If already connected, join lobby immediately
+            if (window.socket.connected) {
+                joinLobbyRoom();
+            }
+            
+            // Also listen for connect event (in case not connected yet)
+            window.socket.on('connect', function() {
+                console.log('Lobby: Socket connected event received');
+                joinLobbyRoom();
+            });
+            
+            window.socket.on('reconnect', function() {
+                console.log('Lobby: Socket reconnected, rejoining lobby room');
+                joinLobbyRoom();
+            });
+        } else {
+            // Socket not ready yet, retry shortly
+            console.log('Socket not ready, retrying in 100ms...');
+            setTimeout(initLobbySocket, 100);
+        }
+    }
+
+    // Wait for DOMContentLoaded to ensure base.html has initialized the socket
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('Lobby: DOMContentLoaded fired');
+        // Give base.html's initializeSocket a moment to run first
+        setTimeout(initLobbySocket, 50);
+        
+        // Check for auto-seek parameter (from "New Game" button after game over)
+        const urlParams = new URLSearchParams(window.location.search);
+        const autoSeek = urlParams.get('seek');
+        if (autoSeek) {
+            console.log('Auto-seek detected for time control:', autoSeek);
+            // Wait for socket to connect then auto-start search
+            setTimeout(function() {
+                if (window.socket && window.socket.connected) {
+                    console.log('Starting auto-seek game search');
+                    window.socket.emit('seek_game', { time_control: autoSeek });
+                    const statusElement = document.getElementById('seeking-status');
+                    if (statusElement) {
+                        statusElement.style.display = 'block';
+                        statusElement.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Looking for opponent (' + autoSeek + ')...';
+                    }
+                    // Clean up URL to remove the seek parameter
+                    window.history.replaceState({}, document.title, '/');
+                }
+            }, 500);
+        }
+    });
+    
+    // Also try immediately in case DOMContentLoaded already fired
+    if (document.readyState === 'complete' || document.readyState === 'interactive') {
+        console.log('Lobby: Document already ready, initializing...');
+        setTimeout(initLobbySocket, 100);
+    }
+
+    // Check for active game when page becomes visible (user switches tabs or returns to lobby)
+    document.addEventListener('visibilitychange', function() {
+        if (!document.hidden && window.socket && window.socket.connected) {
+            console.log('Page became visible, checking for active game...');
+            window.socket.emit('check_active_game', { watching: false });
+        }
+    });
+
+    // Also check when page gets focus
+    window.addEventListener('focus', function() {
+        if (window.socket && window.socket.connected) {
+            console.log('Page got focus, checking for active game...');
+            window.socket.emit('check_active_game', { watching: false });
+        }
+    });
+
+    // Continuous active game checking (like live games)
+    setInterval(function() {
+        if (window.socket && window.socket.connected) {
+            window.socket.emit('check_active_game', { watching: false });
+        }
+    }, 5000); // Check every 5 seconds
+    
+    // Poll for featured game updates every 3 seconds
+    setInterval(function() {
+        if (window.socket && window.socket.connected) {
+            window.socket.emit('get_featured_game');
+        }
+    }, 3000);
+
+    // Initial checks with retries
+    setTimeout(function() {
+        if (window.socket && window.socket.connected) {
+            window.socket.emit('check_active_game', { watching: false });
+        }
+    }, 100);
+
+    setTimeout(function() {
+        if (window.socket && window.socket.connected) {
+            window.socket.emit('check_active_game', { watching: false });
+            // Also request featured game explicitly
+            console.log('Delayed join_lobby emit for featured game');
+            window.socket.emit('join_lobby');
+        }
+    }, 500);
+
+    setTimeout(function() {
+        if (window.socket && window.socket.connected) {
+            window.socket.emit('check_active_game', { watching: false });
+        }
+    }, 1000);
+
+    setTimeout(function() {
+        if (window.socket && window.socket.connected) {
+            window.socket.emit('check_active_game', { watching: false });
+        }
+    }, 3000);
+
+    function updateLobbyOnlineCount() {
+        fetch('/api/online_users')
+        .then(r => r.json())
+        .then(data => {
+            var el = document.getElementById('lobby-online-count');
+            if (el) {
+                el.textContent = Array.isArray(data) ? data.length : 0;
+            }
+        });
+    }
+
+    updateLobbyOnlineCount();
+    setInterval(updateLobbyOnlineCount, 5000);
+
+    if (window.socket) {
+        window.socket.on('user_count', function(count) {
+            var el = document.getElementById('lobby-online-count');
+            if (el) {
+                el.textContent = count || 0;
+            }
+        });
+    }
+</script>
+{% endblock %}
