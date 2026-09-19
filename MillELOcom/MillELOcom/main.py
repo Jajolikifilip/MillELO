@@ -1189,7 +1189,7 @@ def sitemap_xml():
 @app.route('/')
 def home():
     if not app_ready:
-        return 'OK', 200
+        return render_template('index.html')
     if 'username' in session:
         username = session['username']
         
