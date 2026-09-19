@@ -1188,8 +1188,6 @@ def sitemap_xml():
 
 @app.route('/')
 def home():
-    if not app_ready:
-        return render_template('index.html')
     if 'username' in session:
         username = session['username']
         
@@ -1199,7 +1197,7 @@ def home():
             flash('Your account has been permanently banned.')
             return render_template('index.html')
             
-        user = users.get(username)
+        user = get_user_for_auth(username)
         if user:
             # Get best current game
             best_game = get_best_live_game()
@@ -1237,6 +1235,23 @@ def get_best_live_game():
                     }
 
     return best_game
+
+def get_user_for_auth(username):
+    user = users.get(username)
+    if user:
+        return user
+
+    try:
+        with app.app_context():
+            db_user = User.query.filter_by(username=username).first()
+            if db_user:
+                user = db_user.to_dict()
+                users[username] = user
+                return user
+    except Exception as e:
+        print(f"Could not load user {username}: {e}")
+
+    return None
 
 @app.route('/signup', methods=['GET', 'POST'])
 def signup():
@@ -1306,7 +1321,7 @@ def login():
             flash('This account has been permanently banned and cannot log in.')
             return render_template('login.html')
 
-        user = users.get(username)
+        user = get_user_for_auth(username)
         if user and user['password'] == hash_password(password):
             # Check if 2FA is enabled
             if user.get('2fa_enabled') and user.get('email'):
