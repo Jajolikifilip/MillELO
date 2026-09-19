@@ -10,6 +10,7 @@ simple-websocket
 eventlet
 gevent
 gevent-websocket
+packaging
 waitress
 eventlet
 gunicorn
