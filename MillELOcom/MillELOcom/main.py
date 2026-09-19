@@ -1394,6 +1394,7 @@ def logout():
 
 @app.route('/profile/<username>')
 def profile(username):
+    refresh_users_from_db()
     user = users.get(username)
     if not user:
         return "Korisnik nije pronađen", 404
@@ -4257,6 +4258,8 @@ def update_ratings(game_data, winner):
             white_player['draws'][rating_type] += 1
             black_player['draws'][rating_type] += 1
 
+        save_user_to_db(game_data['white'])
+        save_user_to_db(game_data['black'])
         return
 
     # Get games played for K-factor calculation
