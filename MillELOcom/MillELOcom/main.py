@@ -221,6 +221,16 @@ def load_users_from_db():
                 save_user_to_db('Frut')
         print(f"Loaded {len(users)} users from database")
 
+def refresh_users_from_db():
+    """Refresh the in-memory user cache from the persistent database."""
+    with app.app_context():
+        persisted_users = {
+            db_user.username: db_user.to_dict()
+            for db_user in User.query.all()
+        }
+    users.update(persisted_users)
+    return persisted_users
+
 def load_archived_tournaments_from_db():
     """Load archived tournaments from database into memory"""
     with app.app_context():
@@ -4853,12 +4863,14 @@ def api_leaderboard(rating_type):
     if rating_type not in ['bullet', 'blitz']:
         return jsonify([])
 
+    persisted_users = refresh_users_from_db()
+
     # Get top 3 rankings for badges
     bullet_top3, blitz_top3 = get_leaderboard_rankings()
 
     # Get all users sorted by rating
     user_list = []
-    for username, user_data in users.items():
+    for username, user_data in persisted_users.items():
         if username in banned_users:
             continue
         title, title_color = get_title(user_data.get(f'{rating_type}_rating', 100), user_data)
