@@ -1336,7 +1336,7 @@
             <div style="margin-bottom: 20px; position: relative;">
                 <div style="display: flex; gap: 10px;">
                     <div style="flex: 1; position: relative;">
-                        <input type="text" id="admin-command-input" placeholder="Enter admin command..." autocomplete="off" style="
+                        <input type="text" id="admin-command-input" data-admin-command-input placeholder="Enter admin command..." autocomplete="off" style="
                             width: 100%;
                             padding: 12px 15px; 
                             background: rgba(0, 0, 0, 0.4); 
@@ -1814,7 +1814,7 @@
                                 <button onclick="closeAdminCommands()" style="background: #ff4444; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer;">Close</button>
                             </div>
                             <div style="margin-bottom: 20px;">
-                                <input type="text" id="admin-command-input" placeholder="Enter admin command..." style="width: 70%; padding: 10px; background: #1c1c1c; border: 1px solid #444; color: white; border-radius: 3px;">
+                                <input type="text" data-admin-command-input placeholder="Enter admin command..." style="width: 70%; padding: 10px; background: #1c1c1c; border: 1px solid #444; color: white; border-radius: 3px;">
                                 <button onclick="executeAdminCommand()" style="width: 25%; padding: 10px; background: #28a745; color: white; border: none; border-radius: 3px; cursor: pointer; margin-left: 5px;">Execute</button>
                             </div>
                             <div id="admin-response" style="background: #1c1c1c; padding: 15px; border-radius: 3px; min-height: 200px; max-height: 300px; overflow-y: auto; font-family: monospace; font-size: 14px; white-space: pre-wrap;"></div>
@@ -1827,7 +1827,7 @@
                     
                     // Add Enter key handler for command input
                     setTimeout(() => {
-                        const input = document.getElementById('admin-command-input');
+                        const input = getAdminCommandInput();
                         if (input) {
                             input.addEventListener('keypress', function(e) {
                                 if (e.key === 'Enter') executeAdminCommand();
@@ -2860,7 +2860,7 @@
                 };
                 cmdDiv.onclick = function() {
                     var cmdText = this.getAttribute('data-cmd');
-                    var input = document.getElementById('admin-command-input');
+                    var input = getAdminCommandInput();
                     if (input) {
                         input.value = cmdText + ' ';
                         input.focus();
@@ -2879,7 +2879,7 @@
             // Hide suggestions and clear input
             var suggestionsDiv = document.getElementById('admin-command-suggestions');
             if (suggestionsDiv) suggestionsDiv.style.display = 'none';
-            var adminInput = document.getElementById('admin-command-input');
+            var adminInput = getAdminCommandInput();
             if (adminInput) adminInput.value = '';
             // Clear response area
             var responseDiv = document.getElementById('admin-response');
@@ -3007,8 +3007,18 @@
             content.innerHTML = html;
         }
 
-function executeAdminCommand() {
-            var command = document.getElementById('admin-command-input').value;
+function getAdminCommandInput() {
+            var inputs = document.querySelectorAll('[data-admin-command-input]');
+            for (var i = 0; i < inputs.length; i++) {
+                if (inputs[i].offsetParent !== null) return inputs[i];
+            }
+            return inputs[0] || null;
+        }
+
+        function executeAdminCommand() {
+            var input = getAdminCommandInput();
+            if (!input) return;
+            var command = input.value;
             if (!command.trim()) return;
 
             // Hide suggestions
@@ -3018,7 +3028,7 @@ function executeAdminCommand() {
             window.socket.emit('admin_command', { command: command });
 
             // Clear input
-            document.getElementById('admin-command-input').value = '';
+            input.value = '';
 
             // Add command to response area
             var responseDiv = document.getElementById('admin-response');
@@ -3141,8 +3151,11 @@ function executeAdminCommand() {
                 };
                 suggestionItem.onclick = function() {
                     var cmdText = match.cmd.split(' ')[0];
-                    document.getElementById('admin-command-input').value = cmdText + ' ';
-                    document.getElementById('admin-command-input').focus();
+                    var input = getAdminCommandInput();
+                    if (input) {
+                        input.value = cmdText + ' ';
+                        input.focus();
+                    }
                     suggestionsDiv.style.display = 'none';
                     selectedSuggestionIndex = -1;
                 };
@@ -3192,7 +3205,7 @@ function executeAdminCommand() {
 
         // Allow Enter key to execute commands
         document.addEventListener('DOMContentLoaded', function() {
-            var adminInput = document.getElementById('admin-command-input');
+            var adminInput = getAdminCommandInput();
             if (adminInput) {
                 // Add input event for autocomplete
                 adminInput.addEventListener('input', function(e) {
@@ -3222,6 +3235,7 @@ function executeAdminCommand() {
                 
                 adminInput.addEventListener('keypress', function(e) {
                     if (e.key === 'Enter') {
+                                        e.preventDefault();
                         var suggestionsDiv = document.getElementById('admin-command-suggestions');
                         if (suggestionsDiv) suggestionsDiv.style.display = 'none';
                         executeAdminCommand();

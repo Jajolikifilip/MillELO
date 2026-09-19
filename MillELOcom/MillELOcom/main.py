@@ -83,6 +83,7 @@ admin_tournament_counter = 0  # Counter for admin tournament naming (admin1, adm
 admin_tournament_invites = {}  # {username: [list of tournament_ids they're invited to]}
 tournament_chats = {}  # {tournament_id: [{username, message, timestamp}, ...]}
 game_rooms = {}
+quick_play_lock = threading.Lock()
 online_users = {}  # sid -> username mapping
 banned_users = set()
 paused_users = set()
@@ -310,7 +311,7 @@ ADMIN_COMMANDS = {
     'unban <username>': 'Unban a player',
     'setcolourname <username> <color>': 'Change player name color (e.g. setcolourname Frut #ff0000)',
     'like <username>': 'Leave a like on someone\'s profile',
-    'spawntournament [duration]': 'Spawn arena with your name (e.g., spawntournament 2.30 for 2h 30m, max 3h)',
+    'spawntournament [duration] [time_control]': 'Spawn arena (e.g., spawntournament 2 3+2 or spawntournament 1 1+0, max 3h)',
     'boardsetup': 'Open piece design customization window',
     'createadmintournament': 'Create admin-only tournament (admin1, admin2, etc.)',
     'invite <username> to <tournament>': 'Invite non-admin to admin tournament (e.g. invite Frut to admin1)',
@@ -2913,12 +2914,13 @@ def handle_admin_command(data):
 
     elif cmd == 'spawntournament':
         # Create a daily arena tournament with admin's name
-        # Usage: spawntournament [duration] - duration like 1, 2.30, etc (max 3 hours)
+        # Usage: spawntournament [duration] [time_control], e.g. 2 3+2
         print(f"[ADMIN] spawntournament command triggered by {username}")
         
         # Parse duration argument (default 1 hour)
         duration_hours = 1.0
         duration_minutes = 0
+        time_control = '1+0'
         
         if len(parts) >= 2:
             try:
@@ -2935,6 +2937,13 @@ def handle_admin_command(data):
             except ValueError:
                 emit('admin_response', {'error': 'Invalid duration format. Use: spawntournament 1 (1 hour) or spawntournament 2.30 (2 hours 30 minutes)'})
                 return
+
+        if len(parts) >= 3:
+            time_control = parts[2]
+        valid_time_controls = ['1+0', '3+2', '5+3']
+        if time_control not in valid_time_controls:
+            emit('admin_response', {'error': f'Invalid time control. Use: {", ".join(valid_time_controls)}'})
+            return
         
         # Calculate total minutes and cap at 3 hours (180 minutes)
         total_minutes = int(duration_hours * 60) + duration_minutes
@@ -2969,7 +2978,7 @@ def handle_admin_command(data):
             'id': tournament_id,
             'name': tournament_name,
             'tournament_type': 'daily',
-            'time_control': '1+0',
+            'time_control': time_control,
             'duration': total_minutes,
             'start_time': start_time.isoformat(),
             'end_time': end_time.isoformat(),
@@ -2979,7 +2988,8 @@ def handle_admin_command(data):
             'color': '#4CAF50',
             'leaderboard': [],
             'prizes': {},
-            'created_by': username
+            'created_by': username,
+            'timeline_row': 2
         }
         tournaments[tournament_id] = tournament
         print(f"[ADMIN] Created tournament: {tournament_name} (ID: {tournament_id[:8]}...) by {username}")
@@ -2989,18 +2999,19 @@ def handle_admin_command(data):
             'id': tournament_id,
             'name': tournament_name,
             'tournament_type': 'daily',
-            'time_control': '1+0',
+            'time_control': time_control,
             'duration': total_minutes,
             'start_time': start_time.isoformat(),
             'end_time': end_time.isoformat(),
             'status': 'active',
-            'color': '#4CAF50'
+            'color': '#4CAF50',
+            'timeline_row': 2
         })
         
         # Also emit tournaments_updated to refresh lobby/tournaments page in real-time
         socketio.emit('tournaments_updated', {'action': 'refresh'})
         
-        emit('admin_response', {'message': f'Created tournament: {tournament_name} ({duration_display}) - ID: {tournament_id[:8]}...'})
+        emit('admin_response', {'message': f'Created tournament: {tournament_name} ({duration_display}, {time_control}) - ID: {tournament_id[:8]}...'})
 
     elif cmd == 'createadmintournament':
         global admin_tournament_counter
@@ -3798,27 +3809,49 @@ def on_seek_game(data):
     time_control = data.get('time_control', '3+2')
     print(f"User {username} seeking game with time control {time_control}")
 
-    # Remove user from any existing seeking rooms first
-    rooms_to_remove = []
-    for room_id, room in list(game_rooms.items()):
-        if username in room.get('players', []):
-            rooms_to_remove.append(room_id)
+    # Reserve a match while checking the shared in-memory queue so concurrent
+    # socket requests cannot both create separate rooms for the same pair.
+    with quick_play_lock:
+        rooms_to_remove = []
+        for room_id, room in list(game_rooms.items()):
+            if username in room.get('players', []):
+                rooms_to_remove.append(room_id)
 
-    for room_id in rooms_to_remove:
-        if room_id in game_rooms:
-            del game_rooms[room_id]
-            print(f"Removed {username} from existing room {room_id}")
+        for room_id in rooms_to_remove:
+            if room_id in game_rooms:
+                del game_rooms[room_id]
+                print(f"Removed {username} from existing room {room_id}")
 
-    # Try to match with another player seeking the same time control
-    matched = False
-    for room_id, room in list(game_rooms.items()):
-        if (room.get('seeking', False) and 
-            len(room['players']) == 1 and 
-            room['time_control'] == time_control and 
-            room['players'][0] != username):
+        matched_room = None
+        opponent = None
+        for candidate_room_id, room in list(game_rooms.items()):
+            if (room.get('seeking', False) and
+                len(room['players']) == 1 and
+                room['time_control'] == time_control and
+                room['players'][0] != username):
+                matched_room = candidate_room_id
+                opponent = room['players'][0]
+                room['seeking'] = False
+                break
+
+        if matched_room is None:
+            room_id = str(uuid.uuid4())
+            game_rooms[room_id] = {
+                'players': [username],
+                'time_control': time_control,
+                'seeking': True,
+                'created_at': datetime.now().isoformat()
+            }
+            join_room(room_id)
+            emit('waiting_for_opponent', {'time_control': time_control})
+            print(f"Created seeking room for {username} with time control {time_control}")
+            return
+
+    room_id = matched_room
+    matched = True
+    if matched:
 
             # Match found!
-            opponent = room['players'][0]
             print(f"Matched {username} with {opponent}")
 
             # Randomly assign colors
@@ -3862,8 +3895,9 @@ def on_seek_game(data):
             # Start server-authoritative timer (handles first move countdown)
             start_game_timer(game_id)
 
-            # Remove seeking room
-            del game_rooms[room_id]
+            # Remove the reserved seeking room after the game is created.
+            with quick_play_lock:
+                game_rooms.pop(room_id, None)
 
             # Get both players' session IDs
             current_player_sid = request.sid
@@ -3937,22 +3971,6 @@ def on_seek_game(data):
                 'server_start_time': time.time(),
                 'waiting_for': 'white'
             }, room=game_id)
-
-            matched = True
-            break
-
-    if not matched:
-        # No match found, create new seeking room
-        room_id = str(uuid.uuid4())
-        game_rooms[room_id] = {
-            'players': [username],
-            'time_control': time_control,
-            'seeking': True,
-            'created_at': datetime.now().isoformat()
-        }
-        join_room(room_id)
-        emit('waiting_for_opponent', {'time_control': time_control})
-        print(f"Created seeking room for {username} with time control {time_control}")
 
 @socketio.on('cancel_seek')
 def on_cancel_seek():

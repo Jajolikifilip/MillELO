@@ -686,8 +686,8 @@
                 'world_cup': [3]
             };
             
-            // Admin tournaments ALWAYS go to row 2 (3rd row)
-            var allowedRows = isAdminTournament ? [2] : (typeRowRanges[tType] || [0, 1]);
+            // Spawned/admin tournaments use row 2 (the 3rd timeline row).
+            var allowedRows = tournament.timeline_row !== undefined ? [tournament.timeline_row] : (isAdminTournament ? [2] : (typeRowRanges[tType] || [0, 1]));
             
             // Initialize row tracking if needed
             if (!typeRows['_all']) {
@@ -1046,7 +1046,7 @@
             html += '</div>';
         }
         
-        // Row 4: Admin Tournaments (black glow, black crown, white aura on name)
+        // Row 3: Admin Tournaments (black glow, black crown, white aura on name)
         // Also include scheduled admin tournaments
         var scheduledAdminTournaments = scheduledTournaments.filter(function(t) { return t.admin_only; });
         var allAdminTournaments = adminTournaments.concat(scheduledAdminTournaments);
