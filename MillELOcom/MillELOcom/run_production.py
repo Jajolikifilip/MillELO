@@ -10,7 +10,7 @@ from flask_socketio import SocketIO
 
 app = Flask(__name__, template_folder='templates', static_folder='static')
 app.secret_key = os.environ.get("FLASK_SECRET_KEY") or 'milLELO-secret-key-2024'
-
+app.config['BOOTSTRAP_ERROR'] = None
 app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get("DATABASE_URL")
 app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
     "pool_recycle": 300,
@@ -18,11 +18,22 @@ app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
 }
 
 @app.route('/')
-def health():
+def bootstrap_home():
+    if app.config.get('BOOTSTRAP_ERROR'):
+        return (
+            f"<html><body style='font-family:sans-serif;padding:32px;'>"
+            f"<h2>MillELO failed to start</h2>"
+            f"<p>{app.config['BOOTSTRAP_ERROR']}</p>"
+            f"<p>Check Render environment variables: DATABASE_URL, FLASK_SECRET_KEY, PUBLIC_SITE_URL.</p>"
+            f"</body></html>",
+            503,
+        )
     return '<html><head><meta http-equiv="refresh" content="2"></head><body><p>Loading MillELO...</p></body></html>', 200
 
 @app.route('/health')
 def health_check():
+    if app.config.get('BOOTSTRAP_ERROR'):
+        return 'Bootstrap failed', 503
     return 'OK', 200
 
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')
@@ -37,6 +48,7 @@ def load_main_app():
         app.wsgi_app = main_module.app.wsgi_app
         print(f"[startup] Main app loaded and swapped in {time.time()-t:.1f}s", flush=True)
     except Exception as e:
+        app.config['BOOTSTRAP_ERROR'] = str(e)
         print(f"[startup] Error loading main app: {e}", flush=True)
         import traceback
         traceback.print_exc()

@@ -17,7 +17,7 @@ from models import db, User, Game, Friendship, PrivateMessage, BanRecord, Archiv
 if 'sqlalchemy' not in app.extensions:
     db.init_app(app)
 
-socketio = SocketIO(app, cors_allowed_origins="*", async_mode='gevent')
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')
 
 @app.route('/attached_assets/<path:filename>')
 def serve_attached_assets(filename):
