@@ -17,7 +17,7 @@ from models import db, User, Game, Friendship, PrivateMessage, BanRecord, Archiv
 if 'sqlalchemy' not in app.extensions:
     db.init_app(app)
 
-socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode='gevent')
 
 @app.route('/attached_assets/<path:filename>')
 def serve_attached_assets(filename):
@@ -1167,7 +1167,7 @@ def favicon():
 
 @app.route('/robots.txt')
 def robots_txt():
-    base_url = app.config['PUBLIC_SITE_URL']
+    base_url = request.host_url.rstrip('/')
     content = f"""User-agent: *
 Allow: /
 Sitemap: {base_url}/sitemap.xml
@@ -1176,7 +1176,7 @@ Sitemap: {base_url}/sitemap.xml
 
 @app.route('/sitemap.xml')
 def sitemap_xml():
-    base_url = app.config['PUBLIC_SITE_URL']
+    base_url = request.host_url.rstrip('/')
     content = f"""<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
