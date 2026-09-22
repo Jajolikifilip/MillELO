@@ -13,3 +13,5 @@ services:
         sync: false
       - key: PUBLIC_SITE_URL
         value: https://millelo.onrender.com
+      - key: PUBLIC_SITE_URL
+        value: https://millelo.onrender.com

@@ -19,13 +19,13 @@
     <meta property="og:image:width" content="1024">
     <meta property="og:image:height" content="1024">
     <meta property="og:image:alt" content="MillELO - Nine Men's Morris Online Game">
-    <meta property="og:url" content="{{ config['PUBLIC_SITE_URL'] }}/">
+    <meta property="og:url" content="{{ config['PUBLIC_SITE_URL'] }}{{ request.path }}">
     <meta property="og:locale" content="en_US">
     <meta name="twitter:card" content="summary">
     <meta name="twitter:title" content="MillELO - Play Nine Men's Morris Online">
     <meta name="twitter:description" content="Play Nine Men's Morris online with live multiplayer, ELO rankings, and tournaments.">
     <meta name="twitter:image" content="{{ url_for('static', filename='logo.png', _external=True) }}">
-    <link rel="canonical" href="{{ config['PUBLIC_SITE_URL'] }}/">
+    <link rel="canonical" href="{{ config['PUBLIC_SITE_URL'] }}{{ request.path }}">
     <title>{% block title %}MillELO - Play Nine Men's Morris Online{% endblock %}</title>
     <link rel="icon" type="image/x-icon" href="/favicon.ico">
     <link rel="icon" type="image/png" sizes="48x48" href="{{ url_for('static', filename='logo.png') }}">
