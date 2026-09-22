@@ -148,6 +148,16 @@ class ArchivedTournament(db.Model):
         }
 
 
+class PersistentTournament(db.Model):
+    __tablename__ = 'persistent_tournaments'
+
+    id = db.Column(db.String(100), primary_key=True)
+    data = db.Column(JSON, nullable=False)
+
+    def to_dict(self):
+        return self.data or {}
+
+
 class User(db.Model):
     __tablename__ = 'users'
     

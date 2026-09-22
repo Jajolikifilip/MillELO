@@ -13,7 +13,7 @@ from sqlalchemy import text
 
 from app import app
 
-from models import db, User, Game, Friendship, PrivateMessage, BanRecord, ArchivedTournament
+from models import db, User, Game, Friendship, PrivateMessage, BanRecord, ArchivedTournament, PersistentTournament
 if 'sqlalchemy' not in app.extensions:
     db.init_app(app)
 
@@ -171,8 +171,27 @@ def save_game_to_db(game_id):
                 positions=game_data.get('positions', [])
             )
             db.session.add(db_game)
-            db.session.commit()
-            print(f"Saved game {game_id} to database")
+        else:
+            # Keep the durable record in sync if a game was saved before all
+            # result data, moves, or rating changes were available.
+            db_game.white = game_data.get('white')
+            db_game.black = game_data.get('black')
+            db_game.winner = game_data.get('winner')
+            db_game.status = game_data.get('status', 'finished')
+            db_game.end_reason = game_data.get('end_reason')
+            db_game.time_control = game_data.get('time_control')
+            db_game.rating_type = game_data.get('rating_type')
+            db_game.start_time = game_data.get('start_time')
+            db_game.end_time = game_data.get('end_time')
+            db_game.moves = game_data.get('moves', [])
+            db_game.rating_changes = game_data.get('rating_changes', {})
+            db_game.tournament_id = game_data.get('tournament_id')
+            db_game.white_berserk = game_data.get('white_berserk', False)
+            db_game.black_berserk = game_data.get('black_berserk', False)
+            db_game.positions = game_data.get('positions', [])
+
+        db.session.commit()
+        print(f"Saved game {game_id} to database")
 
 def load_games_from_db():
     """Load all finished games from database into memory"""
@@ -239,6 +258,35 @@ def load_archived_tournaments_from_db():
             archived_tournaments[at.id] = at.to_dict()
         print(f"Loaded {len(archived_tournaments)} archived tournaments from database")
 
+def load_persistent_tournaments_from_db():
+    """Load scheduled and active tournaments from the database."""
+    with app.app_context():
+        for persisted in PersistentTournament.query.all():
+            tournament = persisted.to_dict()
+            if tournament.get('status') in ('scheduled', 'active', 'finished'):
+                tournaments[persisted.id] = tournament
+        print(f"Loaded {len(tournaments)} persistent tournaments from database")
+
+def save_persistent_tournament(tournament):
+    """Persist a scheduled or active tournament."""
+    if not tournament or not tournament.get('id'):
+        return
+    with app.app_context():
+        persisted = db.session.get(PersistentTournament, tournament['id'])
+        if not persisted:
+            persisted = PersistentTournament(id=tournament['id'], data=tournament)
+            db.session.add(persisted)
+        else:
+            persisted.data = tournament
+        db.session.commit()
+
+def delete_persistent_tournament(tournament_id):
+    with app.app_context():
+        persisted = db.session.get(PersistentTournament, tournament_id)
+        if persisted:
+            db.session.delete(persisted)
+            db.session.commit()
+
 def load_banned_users_from_db():
     """Load banned users from database into memory"""
     with app.app_context():
@@ -253,6 +301,7 @@ def load_all_data():
     global app_ready
     load_users_from_db()
     load_games_from_db()
+    load_persistent_tournaments_from_db()
     load_archived_tournaments_from_db()
     load_banned_users_from_db()
     app_ready = True
@@ -1897,6 +1946,10 @@ def analysis(game_id):
 
     game = games.get(game_id)
     if not game:
+        with app.app_context():
+            stored_game = db.session.get(Game, game_id)
+            game = stored_game.to_dict() if stored_game else None
+    if not game:
         flash('This game is no longer available. It may have been played before game history was saved.')
         return redirect(url_for('home'))
 
@@ -2127,6 +2180,7 @@ def create_scheduled_tournaments():
             'leaderboard': [],
             'prizes': {}
         }
+        save_persistent_tournament(tournaments[tournament_id])
 
     # Create tournaments for the next 7 days
     for days_ahead in range(7):
@@ -2234,6 +2288,7 @@ def create_tournament_if_not_exists(tournament_type, start_time):
             'leaderboard': [],
             'prizes': get_tournament_prizes(tournament_type)
         }
+        save_persistent_tournament(tournaments[tournament_id])
 
 def create_tournament_if_not_exists_with_tc(tournament_type, start_time, time_control):
     """Create tournament with specific time control if it doesn't already exist"""
@@ -2266,6 +2321,7 @@ def create_tournament_if_not_exists_with_tc(tournament_type, start_time, time_co
             'leaderboard': [],
             'prizes': get_tournament_prizes(tournament_type)
         }
+        save_persistent_tournament(tournaments[tournament_id])
 
 def create_annual_world_cup(current_time):
     """Create 3 annual World Cup tournaments - one for each time control on different dates"""
@@ -2320,6 +2376,7 @@ def create_annual_world_cup(current_time):
                 'prizes': get_tournament_prizes('world_cup'),
                 'is_world_cup': True  # Special flag to always show this
             }
+            save_persistent_tournament(tournaments[tournament_id])
 
 def award_tournament_trophies(tournament_id, tournament):
     """Award trophies to players when tournament ends"""
@@ -2508,6 +2565,7 @@ def start_scheduled_tournaments():
             start_time = datetime.fromisoformat(tournament['start_time'])
             if current_time >= start_time:
                 tournament['status'] = 'active'
+                save_persistent_tournament(tournament)
                 print(f"Tournament {tournament_id} is now active! Starting initial pairing...")
                 # Start a background thread to run initial pairing
                 import threading
@@ -2521,6 +2579,7 @@ def start_scheduled_tournaments():
                 tournament['status'] = 'finished'
                 # Mark when tournament finished for removal timing
                 tournament['finished_time'] = current_time.isoformat()
+                save_persistent_tournament(tournament)
                 # Award trophies to players
                 award_tournament_trophies(tournament_id, tournament)
         elif tournament['status'] == 'finished':
@@ -2539,6 +2598,7 @@ def start_scheduled_tournaments():
     # Remove finished tournaments
     for tournament_id in finished_tournaments:
         del tournaments[tournament_id]
+        delete_persistent_tournament(tournament_id)
 
 def get_tournament_prizes(tournament_type):
     """Get prizes for tournament type"""
@@ -2992,6 +3052,7 @@ def handle_admin_command(data):
             'timeline_row': 2
         }
         tournaments[tournament_id] = tournament
+        save_persistent_tournament(tournament)
         print(f"[ADMIN] Created tournament: {tournament_name} (ID: {tournament_id[:8]}...) by {username}")
         
         # Broadcast tournament creation to all clients
@@ -3046,6 +3107,7 @@ def handle_admin_command(data):
             'invited_users': []
         }
         tournaments[tournament_id] = tournament
+        save_persistent_tournament(tournament)
         print(f"[ADMIN] Created admin tournament: {tournament_name} (ID: {tournament_id[:8]}...) by {username}")
         
         # Broadcast tournament creation
@@ -4278,6 +4340,7 @@ def update_ratings(game_data, winner):
 
         save_user_to_db(game_data['white'])
         save_user_to_db(game_data['black'])
+        save_game_to_db(game_data.get('id'))
         return
 
     # Get games played for K-factor calculation
@@ -5011,7 +5074,15 @@ def api_user_games(username):
 @app.route('/api/user/<username>/all-games')
 def api_user_all_games(username):
     user_games = []
-    for game_id, game in games.items():
+    with app.app_context():
+        stored_games = Game.query.filter(
+            (Game.white == username) | (Game.black == username),
+            Game.status == 'finished'
+        ).order_by(Game.start_time.desc()).all()
+
+    for stored_game in stored_games:
+        game_id = stored_game.id
+        game = stored_game.to_dict()
         if (game.get('white') == username or game.get('black') == username) and game.get('status') == 'finished':
             # Determine result from user's perspective
             winner = game.get('winner')
@@ -5289,6 +5360,8 @@ def update_tournament_scores(game_data, winner):
             # Reset streak on draw
             tournament['streaks'][black_player] = 0
 
+    save_persistent_tournament(tournament)
+
 @app.route('/api/join_tournament', methods=['POST'])
 def api_join_tournament():
     if 'username' not in session:
@@ -5315,6 +5388,7 @@ def api_join_tournament():
                 'draws': [],
                 'series': []  # Visual series: list of {points, type, streak} for display
             }
+            save_persistent_tournament(tournament)
             return jsonify({'success': True})
 
     return jsonify({'error': 'Tournament not found'}), 404
@@ -5332,6 +5406,7 @@ def api_leave_tournament():
         tournament = tournaments[tournament_id]
         if username in tournament['players']:
             del tournament['players'][username]
+            save_persistent_tournament(tournament)
             return jsonify({'success': True})
 
     return jsonify({'error': 'Tournament not found'}), 404
@@ -5585,6 +5660,7 @@ def on_join_tournament(data):
                 'berserk': False,
                 'series': []  # Visual series for Lichess-style display
             }
+            save_persistent_tournament(tournament)
             print(f"Player {username} joined tournament {tournament_id[:8]}... Total players: {len(tournament['players'])} Status: {tournament['status']}")
             emit('tournament_joined', {'tournament_id': tournament_id})
             
@@ -5623,6 +5699,7 @@ def on_leave_tournament(data):
         tournament = tournaments[tournament_id]
         if username in tournament['players']:
             del tournament['players'][username]
+            save_persistent_tournament(tournament)
             emit('tournament_left', {'tournament_id': tournament_id})
 
 @socketio.on('tournament_chat_message')
