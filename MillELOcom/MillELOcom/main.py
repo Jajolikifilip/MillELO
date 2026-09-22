@@ -1214,6 +1214,12 @@ def health_check():
 def favicon():
     return send_from_directory('static', 'favicon.ico', mimetype='image/x-icon')
 
+@app.route('/googleed9d01396d11bd86.html')
+def google_site_verification():
+    return 'google-site-verification: googleed9d01396d11bd86.html', 200, {
+        'Content-Type': 'text/plain; charset=utf-8'
+    }
+
 @app.route('/robots.txt')
 def robots_txt():
     base_url = app.config['PUBLIC_SITE_URL']
