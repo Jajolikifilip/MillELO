@@ -1167,7 +1167,7 @@ def favicon():
 
 @app.route('/robots.txt')
 def robots_txt():
-    base_url = request.host_url.rstrip('/')
+    base_url = app.config['PUBLIC_SITE_URL']
     content = f"""User-agent: *
 Allow: /
 Sitemap: {base_url}/sitemap.xml
@@ -1176,7 +1176,7 @@ Sitemap: {base_url}/sitemap.xml
 
 @app.route('/sitemap.xml')
 def sitemap_xml():
-    base_url = request.host_url.rstrip('/')
+    base_url = app.config['PUBLIC_SITE_URL']
     content = f"""<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>

@@ -6,6 +6,7 @@ import sys
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("FLASK_SECRET_KEY") or 'milLELO-secret-key-2024'
+app.config['PUBLIC_SITE_URL'] = os.environ.get('PUBLIC_SITE_URL', 'https://millelo.onrender.com').rstrip('/')
 
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=30)
 app.config['SESSION_COOKIE_HTTPONLY'] = True

@@ -11,3 +11,5 @@ services:
         sync: false
       - key: FLASK_SECRET_KEY
         sync: false
+      - key: PUBLIC_SITE_URL
+        value: https://millelo.onrender.com

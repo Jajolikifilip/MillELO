@@ -3,30 +3,30 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="MillELO.com - Play Nine Men's Morris online! Free real-time multiplayer with ELO ratings, tournaments, and leaderboards. Challenge players worldwide in Bullet and Blitz time controls.">
-    <meta name="keywords" content="MillELO, Nine Men's Morris, Mill game, online board game, ELO rating, multiplayer, tournaments, strategy game, mill online, nine mens morris online">
-    <meta name="author" content="MillELO.com">
+    <meta name="description" content="MillELO - Play Nine Men's Morris online. Free multiplayer board game with ELO ratings, tournaments, leaderboards, and live strategy matches. Search for mill, millelo, nine men's morris game, or nine men morris online.">
+    <meta name="keywords" content="MillELO, Millelo, millelo, Nine Men's Morris, nine men morris, nine men's morris game, mill game, mill online, online board game, ELO rating, multiplayer board game, nine men morris online, mill game online, online nine men's morris">
+    <meta name="author" content="MillELO">
     <meta name="robots" content="index, follow">
     <meta name="theme-color" content="#1a1a2e">
     <meta name="msapplication-TileColor" content="#1a1a2e">
     <meta name="msapplication-TileImage" content="{{ url_for('static', filename='logo.png') }}">
     <meta name="application-name" content="MillELO">
-    <meta property="og:title" content="{% block og_title %}MillELO.com - Play Nine Men's Morris Online{% endblock %}">
-    <meta property="og:description" content="Play Nine Men's Morris online with real-time multiplayer, ELO ratings, and tournaments. Challenge players worldwide!">
+    <meta property="og:title" content="{% block og_title %}MillELO - Play Nine Men's Morris Online{% endblock %}">
+    <meta property="og:description" content="Play Nine Men's Morris online with real-time multiplayer, ELO ratings, tournaments, and strategy matches. Search for mill, millelo, or nine men's morris game.">
     <meta property="og:type" content="website">
-    <meta property="og:site_name" content="MillELO.com">
+    <meta property="og:site_name" content="MillELO">
     <meta property="og:image" content="{{ url_for('static', filename='logo.png', _external=True) }}">
     <meta property="og:image:width" content="1024">
     <meta property="og:image:height" content="1024">
     <meta property="og:image:alt" content="MillELO - Nine Men's Morris Online Game">
-    <meta property="og:url" content="https://millelo.com/">
+    <meta property="og:url" content="{{ config['PUBLIC_SITE_URL'] }}/">
     <meta property="og:locale" content="en_US">
     <meta name="twitter:card" content="summary">
-    <meta name="twitter:title" content="MillELO.com - Play Nine Men's Morris Online">
-    <meta name="twitter:description" content="Play Nine Men's Morris online with real-time multiplayer, ELO ratings, and tournaments.">
+    <meta name="twitter:title" content="MillELO - Play Nine Men's Morris Online">
+    <meta name="twitter:description" content="Play Nine Men's Morris online with live multiplayer, ELO rankings, and tournaments.">
     <meta name="twitter:image" content="{{ url_for('static', filename='logo.png', _external=True) }}">
-    <link rel="canonical" href="https://millelo.com/">
-    <title>{% block title %}MillELO.com - Play Nine Men's Morris Online{% endblock %}</title>
+    <link rel="canonical" href="{{ config['PUBLIC_SITE_URL'] }}/">
+    <title>{% block title %}MillELO - Play Nine Men's Morris Online{% endblock %}</title>
     <link rel="icon" type="image/x-icon" href="/favicon.ico">
     <link rel="icon" type="image/png" sizes="48x48" href="{{ url_for('static', filename='logo.png') }}">
     <link rel="icon" type="image/png" sizes="192x192" href="{{ url_for('static', filename='logo.png') }}">
@@ -36,12 +36,12 @@
         "@context": "https://schema.org",
         "@type": "WebSite",
         "name": "MillELO",
-        "alternateName": ["MillELO.com", "Millelo", "millelo", "Mill ELO", "milelo"],
-        "url": "https://millelo.com/",
-        "description": "Play Nine Men's Morris online with real-time multiplayer, ELO ratings, and tournaments.",
+        "alternateName": ["MillELO", "Millelo", "millelo", "Mill ELO", "milelo", "Nine Men's Morris"],
+        "url": "{{ config['PUBLIC_SITE_URL'] }}/",
+        "description": "Play Nine Men's Morris online with real-time multiplayer, ELO ratings, tournaments, and strategy matches.",
         "potentialAction": {
             "@type": "SearchAction",
-            "target": "https://millelo.com/leaderboard?q={search_term_string}",
+            "target": "{{ config['PUBLIC_SITE_URL'] }}/leaderboard?q={search_term_string}",
             "query-input": "required name=search_term_string"
         }
     }
@@ -51,8 +51,8 @@
         "@context": "https://schema.org",
         "@type": "WebApplication",
         "name": "MillELO",
-        "alternateName": ["Millelo", "millelo", "milelo", "Mill ELO"],
-        "url": "https://millelo.com/",
+        "alternateName": ["Millelo", "millelo", "milelo", "Mill ELO", "Nine Men's Morris"],
+        "url": "{{ config['PUBLIC_SITE_URL'] }}/",
         "applicationCategory": "GameApplication",
         "operatingSystem": "Web Browser",
         "offers": {
